@@ -57,7 +57,6 @@ class BaseDataset(Dataset):
 
         self._index: list[dict] = index
 
-
         self.target_sr = target_sr
         self.instance_transforms = instance_transforms
 
@@ -146,12 +145,12 @@ class BaseDataset(Dataset):
         return instance_data
 
     @staticmethod
-    def _filter_records_from_dataset(
-            index: list, max_audio_length, limit
-    ) -> list:
+    def _filter_records_from_dataset(index: list, max_audio_length, limit) -> list:
         initial_size = len(index)
         if max_audio_length is not None:
-            exceeds_audio_length = np.array([el["audio_len"] for el in index]) >= max_audio_length
+            exceeds_audio_length = (
+                np.array([el["audio_len"] for el in index]) >= max_audio_length
+            )
             _total = exceeds_audio_length.sum()
             logger.info(
                 f"{_total} ({_total / initial_size:.1%}) records are longer then "
@@ -189,9 +188,9 @@ class BaseDataset(Dataset):
                 such as label and object path.
         """
         for entry in index:
-            assert "path_mix" in entry, (
-                "Each dataset item should include field 'path_mix'"
-            )
+            assert (
+                "path_mix" in entry
+            ), "Each dataset item should include field 'path_mix'"
 
     @staticmethod
     def _sort_index(index):
@@ -208,7 +207,6 @@ class BaseDataset(Dataset):
                 such as label and object path.
         """
         return index
-
 
     @staticmethod
     def _shuffle_and_limit_index(index, limit, shuffle_index):
