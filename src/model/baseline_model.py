@@ -7,7 +7,7 @@ class BaselineModel(nn.Module):
     Simple MLP
     """
 
-    def __init__(self, n_feats, n_class, fc_hidden=512):
+    def __init__(self, n_feats, fc_hidden=512):
         """
         Args:
             n_feats (int): number of input features.
@@ -22,10 +22,10 @@ class BaselineModel(nn.Module):
             nn.ReLU(),
             nn.Linear(in_features=fc_hidden, out_features=fc_hidden),
             nn.ReLU(),
-            nn.Linear(in_features=fc_hidden, out_features=n_class),
+            nn.Linear(in_features=fc_hidden, out_features=n_feats),
         )
 
-    def forward(self, data_object, **batch):
+    def forward(self, mix_data_object, **batch):
         """
         Model forward method.
 
@@ -34,7 +34,9 @@ class BaselineModel(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
-        return {"logits": self.net(data_object)}
+        wav1 = self.net(mix_data_object)
+        wav2 = wav1
+        return {"out1": wav1, "out2": wav2}
 
     def __str__(self):
         """
