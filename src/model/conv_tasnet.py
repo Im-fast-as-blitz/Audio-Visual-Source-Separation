@@ -86,8 +86,8 @@ class ConvTasNetModel(nn.Module):
             nn.Conv1d(N, B, 1)
         )
 
-        self.tcn == nn.Sequential()
-        for i in range(R):
+        self.tcn = nn.Sequential()
+        for _ in range(R):
             for j in range(X):
                 self.tcn.append(BlockConv1D(B, H, P, j**2, Sc))
         self.end_separ = nn.Sequential(
@@ -99,7 +99,7 @@ class ConvTasNetModel(nn.Module):
         self.decoder = nn.ConvTranspose1d(N, 1, L, stride=L//2)
         
 
-    def forward(self, x):
+    def forward(self, mix_data_object, **batch):
         """
         Model forward method.
 
@@ -109,7 +109,7 @@ class ConvTasNetModel(nn.Module):
             output (dict): output dict containing logits.
         """
         # encoder
-        x = self.encoder(x)
+        x = self.encoder(mix_data_object)
 
         # separator
         emb = self.start_separ(x)

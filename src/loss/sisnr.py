@@ -4,7 +4,7 @@ from torchmetrics import ScaleInvariantSignalNoiseRatio
 from src.metrics.base_metric import BaseMetric
 
 class SI_SNR(nn.Module):
-    def __init__(self, device:str, *args, **kwargs):
+    def __init__(self, device:str = "auto", *args, **kwargs):
         """
         Computes SI-SNRi metric
 
