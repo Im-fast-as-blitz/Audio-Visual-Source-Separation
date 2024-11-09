@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 class СustomAudioDataset(BaseDataset):
     """
-    For custom dla_avss dataset 
+    For custom dla_avss dataset
     """
+
     def __init__(self, part: str, dir: Optional[str], *args, **kwargs):
         if dir is None:
             data_dir = ROOT_PATH / "data" / "dla_dataset" / "audio"
@@ -42,15 +43,15 @@ class СustomAudioDataset(BaseDataset):
         split_dir = self._data_dir / "audio" / part
 
         mix_dir = split_dir / "mix"
-        if part == "train":
+        if part == "train" or part == "val":
             s1_dir = split_dir / "s1"
             s2_dir = split_dir / "s2"
-        
+
         for root, dirs, files in os.walk(mix_dir):
             for file in files:
                 file_path = os.path.join(root, file)
 
-                if part == "train":
+                if part == "train" or part == "val":
                     s1_path = os.path.join(s1_dir, file)
                     s2_path = os.path.join(s2_dir, file)
 
@@ -65,25 +66,24 @@ class СustomAudioDataset(BaseDataset):
                     index.append({"path_mix": file_path})
 
         return index
-    
+
     def __getitem__(self, ind):
         data_dict = self._index[ind]
 
         mix_path = data_dict["path_mix"]
         mix_data_object = self.load_audio(mix_path)
 
-        if self._part == "train":
+        if self._part == "train" or self._part == "val":
             s1_path = data_dict["path_s1"]
             s2_path = data_dict["path_s2"]
             s1_data_object = self.load_audio(s1_path)
             s2_data_object = self.load_audio(s2_path)
- 
 
             instance_data = {
-                            "mix_data_object": mix_data_object,
-                            "s1_data_object": s1_data_object,
-                            "s2_data_object": s2_data_object,
-                            }
+                "mix_data_object": mix_data_object,
+                "s1_data_object": s1_data_object,
+                "s2_data_object": s2_data_object,
+            }
         else:
             instance_data = {"mix_data_object": mix_data_object}
         return instance_data
