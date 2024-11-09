@@ -1,5 +1,5 @@
 defaults:
-  - model: baseline
+  - model: conv_tasnet
   - writer: wandb 
   - metrics: test_it_works
   - datasets: example_onebatchtest
@@ -14,7 +14,7 @@ lr_scheduler:
   gamma: 0.9
   step_size: ${trainer.epoch_len}
 loss_function:
-  _target_: src.loss.ExampleLoss
+  _target_: src.loss.SI_SNR
 trainer:
   log_step: 50
   n_epochs: 5
