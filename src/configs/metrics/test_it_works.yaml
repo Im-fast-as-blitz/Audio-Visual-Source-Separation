@@ -6,6 +6,7 @@ train: # metrics that are calculated during training
 inference: # metrics that are calculated during inference (eval)
   - _target_: src.metrics.SI_SNRi
     device: ${metrics.device}
+    num_speakers: 2
     name: "SI-SNRi"
   - _target_: src.metrics.SDRi
     device: ${metrics.device}
