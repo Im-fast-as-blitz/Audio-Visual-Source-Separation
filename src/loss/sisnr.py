@@ -30,6 +30,6 @@ class SI_SNR(nn.Module):
         for perm in itertools.permutations(range(self.num_speakers)):
             curr_loss = 0
             for ind_target, ind_pred in enumerate(perm):
-                curr_loss += self.metric(kwargs[f"s{ind_pred}_pred_object"], kwargs[f"s{ind_target}_data_object"]).mean()
+                curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"]).mean()
             losses.append(curr_loss)
         return -torch.max(torch.tensor(losses))
