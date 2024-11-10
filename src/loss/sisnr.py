@@ -3,9 +3,8 @@ from torch import nn
 from torchmetrics import ScaleInvariantSignalNoiseRatio
 import itertools
 
-
 class SI_SNR(nn.Module):
-    def __init__(self, batch_size:int = 4, num_speakers:int = 2, device:str = "auto", *args, **kwargs):
+    def __init__(self, num_speakers:int = 2, device:str = "auto", *args, **kwargs):
         """
         Computes SI-SNRi metric
 
@@ -17,7 +16,6 @@ class SI_SNR(nn.Module):
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.metric = ScaleInvariantSignalNoiseRatio().to(device)
         self.num_speakers = num_speakers
-        self.batch_size = batch_size
 
     def __call__(self, **kwargs):
         """
@@ -28,13 +26,10 @@ class SI_SNR(nn.Module):
         Returns:
             metric (float): calculated metric.
         """
-        batch_losses = []
-        for val_ind in range(self.batch_size):
-            losses = []
-            for perm in itertools.permutations(range(self.num_speakers)):
-                curr_loss = 0
-                for ind_target, ind_pred in enumerate(perm):
-                    curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind])
-                losses.append(curr_loss)
-            batch_losses.append(-torch.max(*losses))
-        return torch.tensor(batch_losses)
+        losses = []
+        for perm in itertools.permutations(range(self.num_speakers)):
+            curr_loss = 0
+            for ind_target, ind_pred in enumerate(perm):
+                curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"])
+            losses.append(curr_loss)
+        return {"loss": -torch.max(torch.tensor(losses))}
