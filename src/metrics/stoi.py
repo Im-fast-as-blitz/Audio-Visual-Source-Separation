@@ -19,7 +19,7 @@ class STOI(BaseMetric):
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.metric = ShortTimeObjectiveIntelligibility(fs=fs).to(device)
 
-    def __call__(self, preds: torch.Tensor, target: torch.Tensor, **kwargs):
+    def __call__(self, **kwargs):
         """
         Takes predicted and target audio and returns STOI value.
 
