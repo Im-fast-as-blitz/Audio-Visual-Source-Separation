@@ -6,7 +6,7 @@ import numpy as np
 
 
 class STOI(BaseMetric):
-    def __init__(self, device:str, fs: int = 16000, *args, **kwargs):
+    def __init__(self, device:str, num_speakers:int = 2, fs: int = 16000, *args, **kwargs):
         """
         Computes STOI metric
 
@@ -18,6 +18,7 @@ class STOI(BaseMetric):
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.metric = ShortTimeObjectiveIntelligibility(fs=fs).to(device)
+        self.num_speakers = num_speakers
 
     def __call__(self, **kwargs):
         """
