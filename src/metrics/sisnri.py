@@ -59,5 +59,5 @@ class SI_SNRi(BaseMetric):
             curr_metric = 0
             for ind_target, ind_pred in enumerate(perm):
                 curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"]) - self.metric(kwargs["mix_data_object"], kwargs[f"s{ind_target+1}_data_object"])
-            metrics.append(curr_metric)
+            metrics.append(curr_metric / self.num_speakers)
         return np.max(metrics)

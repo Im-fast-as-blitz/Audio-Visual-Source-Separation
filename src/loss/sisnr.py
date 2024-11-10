@@ -31,5 +31,5 @@ class SI_SNR(nn.Module):
             curr_loss = 0
             for ind_target, ind_pred in enumerate(perm):
                 curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"])
-            losses.append(curr_loss)
+            losses.append(curr_loss / self.num_speakers)
         return {"loss": -torch.max(*losses)}
