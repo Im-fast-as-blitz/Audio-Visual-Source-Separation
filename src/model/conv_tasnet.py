@@ -126,7 +126,7 @@ class ConvTasNetModel(nn.Module):
         masked_emb = [x * masks[i] for i in range(self.num_speakers)]
 
         # decder
-        result = {f's{i}_pred_object': torch.squeeze(self.decoder(masked_emb[i]), 1) for i in range(self.num_speakers)}
+        result = {f's{i+1}_pred_object': torch.squeeze(self.decoder(masked_emb[i]), 1) for i in range(self.num_speakers)}
         return result
 
     def __str__(self):
