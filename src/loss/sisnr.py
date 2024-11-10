@@ -32,4 +32,4 @@ class SI_SNR(nn.Module):
             for ind_target, ind_pred in enumerate(perm):
                 curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"])
             losses.append(curr_loss)
-        return {"loss": -torch.max(torch.tensor(losses))}
+        return {"loss": -torch.max(*losses)}
