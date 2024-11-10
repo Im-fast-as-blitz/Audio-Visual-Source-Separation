@@ -1,10 +1,10 @@
 import torch
 from torch import nn
 from torchmetrics import ScaleInvariantSignalNoiseRatio
-from src.metrics.base_metric import BaseMetric
+import itertools
 
 class SI_SNR(nn.Module):
-    def __init__(self, device:str = "auto", *args, **kwargs):
+    def __init__(self, num_speakers:int = 2, device:str = "auto", *args, **kwargs):
         """
         Computes SI-SNRi metric
 
@@ -15,15 +15,21 @@ class SI_SNR(nn.Module):
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.metric = ScaleInvariantSignalNoiseRatio().to(device)
+        self.num_speakers = num_speakers
 
-    def __call__(self, preds: torch.Tensor, target: torch.Tensor, **kwargs):
+    def __call__(self, **kwargs):
         """
         Takes predicted audio and target audio and returns SI-SNRi value.
 
         Args:
-            preds (Tensor): predicted audio.
-            target (Tensor): target audio.
+            kwargs
         Returns:
             metric (float): calculated metric.
         """
-        return -self.metric(preds, target).mean()
+        losses = []
+        for perm in itertools.permutations(range(self.num_speakers)):
+            curr_loss = 0
+            for ind_target, ind_pred in enumerate(perm):
+                curr_loss += self.metric(kwargs[f"s{ind_pred}_pred_object"], kwargs[f"s{ind_target}_data_object"]).mean()
+            losses.append(curr_loss)
+        return -torch.max(torch.tensor(losses))
