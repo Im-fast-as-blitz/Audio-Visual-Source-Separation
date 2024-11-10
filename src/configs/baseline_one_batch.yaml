@@ -1,7 +1,7 @@
 defaults:
   - model: baseline
   - writer: wandb 
-  - metrics: example
+  - metrics: test_it_works
   - datasets: example_onebatchtest
   - dataloader: example
   - transforms: example
