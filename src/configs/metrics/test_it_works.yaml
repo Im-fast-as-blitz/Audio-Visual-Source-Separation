@@ -6,16 +6,20 @@ train: # metrics that are calculated during training
 inference: # metrics that are calculated during inference (eval)
   - _target_: src.metrics.SI_SNRi
     device: ${metrics.device}
+    num_speakers: 2
     name: "SI-SNRi"
   - _target_: src.metrics.SDRi
     device: ${metrics.device}
+    num_speakers: 2
     name: "SDRi"
   - _target_: src.metrics.PESQ
     device: ${metrics.device}
+    num_speakers: 2
     fs: 16000
     mode: "wb"
     name: "PESQ"
   - _target_: src.metrics.STOI
     device: ${metrics.device}
+    num_speakers: 2
     fs: 16000
     name: "STOI"

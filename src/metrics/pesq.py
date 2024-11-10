@@ -1,9 +1,12 @@
 import torch
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality
 from src.metrics.base_metric import BaseMetric
+import itertools
+import numpy as np
+
 
 class PESQ(BaseMetric):
-    def __init__(self, device:str, fs: int = 16000, mode: str = 'wb', *args, **kwargs):
+    def __init__(self, device:str, num_speakers: int = 2, fs: int = 16000, mode: str = 'wb', *args, **kwargs):
         """
         Computes PESQ metric
 
@@ -16,15 +19,24 @@ class PESQ(BaseMetric):
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.metric = PerceptualEvaluationSpeechQuality(fs=fs, mode=mode).to(device)
+        self.num_speakers = num_speakers
 
-    def __call__(self, mixed: torch.Tensor, target: torch.Tensor, **kwargs):
+    def __call__(self, **kwargs):
         """
-        Takes mixed audio and target audio and returns PESQ value.
+        Takes pred audio and target audio and returns PESQ value.
 
         Args:
-            mixed (Tensor): mixed audio.
-            target (Tensor): target audio.
+            kwargs
         Returns:
             metric (float): calculated metric.
         """
-        return self.metric(mixed, target).mean().item()
+        batch_metrics = []
+        for val_ind in range(kwargs[f"s1_pred_object"].shape[0]):
+            metrics = []
+            for perm in itertools.permutations(range(self.num_speakers)):
+                curr_metric = 0
+                for ind_target, ind_pred in enumerate(perm):
+                    curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind]).mean().item()
+                metrics.append(curr_metric / self.num_speakers)
+            batch_metrics.append(np.max(metrics))
+        return np.mean(batch_metrics)

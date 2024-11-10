@@ -1,9 +1,10 @@
 train:
   _target_: src.datasets.СustomAudioDataset
+  limit: 2
   part: "train"
   dir: "dla_dataset"
 val:
   _target_: src.datasets.СustomAudioDataset
-  limit: 10
+  limit: 2
   part: "val"
   dir: "dla_dataset"

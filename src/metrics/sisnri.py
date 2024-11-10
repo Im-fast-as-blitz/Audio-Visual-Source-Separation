@@ -1,6 +1,9 @@
 import torch
 from torchmetrics import ScaleInvariantSignalNoiseRatio
 from src.metrics.base_metric import BaseMetric
+import itertools
+import numpy as np
+
 
 class SI_SNR(BaseMetric):
     def __init__(self, device:str, *args, **kwargs):
@@ -29,7 +32,7 @@ class SI_SNR(BaseMetric):
     
 
 class SI_SNRi(BaseMetric):
-    def __init__(self, device:str, *args, **kwargs):
+    def __init__(self, device:str, num_speakers:int = 2, *args, **kwargs):
         """
         Computes SI-SNRi metric
 
@@ -40,16 +43,24 @@ class SI_SNRi(BaseMetric):
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.metric = SI_SNR(device)
+        self.num_speakers = num_speakers
 
-    def __call__(self, input: torch.Tensor, preds: torch.Tensor, target: torch.Tensor, **kwargs):
+    def __call__(self, **kwargs):
         """
         Takes input, predicted and target audio and returns SI-SNRi value.
 
         Args:
-            input (Tensor): input audio.
-            preds (Tensor): predicted audio.
-            target (Tensor): target audio.
+            kwargs
         Returns:
             metric (float): calculated metric.
         """
-        return self.metric(preds, target) - self.metric(input, target)
+        batch_metrics = []
+        for val_ind in range(kwargs[f"s1_pred_object"].shape[0]):
+            metrics = []
+            for perm in itertools.permutations(range(self.num_speakers)):
+                curr_metric = 0
+                for ind_target, ind_pred in enumerate(perm):
+                    curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind]) - self.metric(kwargs["mix_data_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind])
+                metrics.append(curr_metric / self.num_speakers)
+            batch_metrics.append(np.max(metrics))
+        return np.mean(batch_metrics)
