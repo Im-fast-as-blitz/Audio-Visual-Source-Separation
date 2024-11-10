@@ -26,7 +26,7 @@ class SI_SNR(nn.Module):
         Returns:
             metric (float): calculated metric.
         """
-        batch_losses = []
+        batch_losses = 0
         batch_size = kwargs[f"s1_pred_object"].shape[0]
         for val_ind in range(batch_size):
             losses = []
