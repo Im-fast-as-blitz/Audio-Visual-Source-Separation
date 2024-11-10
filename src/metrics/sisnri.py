@@ -54,10 +54,13 @@ class SI_SNRi(BaseMetric):
         Returns:
             metric (float): calculated metric.
         """
-        metrics = []
-        for perm in itertools.permutations(range(self.num_speakers)):
-            curr_metric = 0
-            for ind_target, ind_pred in enumerate(perm):
-                curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"]) - self.metric(kwargs["mix_data_object"], kwargs[f"s{ind_target+1}_data_object"])
-            metrics.append(curr_metric / self.num_speakers)
-        return np.max(metrics)
+        batch_metrics = []
+        for val_ind in range(kwargs[f"s1_pred_object"].shape[0]):
+            metrics = []
+            for perm in itertools.permutations(range(self.num_speakers)):
+                curr_metric = 0
+                for ind_target, ind_pred in enumerate(perm):
+                    curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind]) - self.metric(kwargs["mix_data_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind])
+                metrics.append(curr_metric / self.num_speakers)
+            batch_metrics.append(np.max(metrics))
+        return np.mean(batch_metrics)

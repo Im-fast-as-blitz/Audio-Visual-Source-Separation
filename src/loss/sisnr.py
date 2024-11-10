@@ -26,10 +26,13 @@ class SI_SNR(nn.Module):
         Returns:
             metric (float): calculated metric.
         """
-        losses = []
-        for perm in itertools.permutations(range(self.num_speakers)):
-            curr_loss = 0
-            for ind_target, ind_pred in enumerate(perm):
-                curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"], kwargs[f"s{ind_target+1}_data_object"])
-            losses.append(curr_loss / self.num_speakers)
-        return {"loss": -torch.max(*losses)}
+        batch_losses = []
+        for val_ind in range(kwargs[f"s1_pred_object"].shape[0]):
+            losses = []
+            for perm in itertools.permutations(range(self.num_speakers)):
+                curr_loss = 0
+                for ind_target, ind_pred in enumerate(perm):
+                    curr_loss += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind])
+                losses.append(curr_loss / self.num_speakers)
+            batch_losses.append(-torch.max(*losses))
+        return {"loss": torch.mean(*batch_losses)}
