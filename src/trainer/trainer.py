@@ -1,3 +1,6 @@
+import pandas as pd
+
+from random import shuffle
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
@@ -72,8 +75,27 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # Log Stuff
+            # self._log_audio(batch)
             pass
         else:
-            # Log Stuff
-            pass
+            self._log_audio(batch)
+
+    def _log_audio(self, batch, examples_to_log=8):
+        result = {}
+        examples_to_log = min(examples_to_log, batch['mix_data_oject'].shape[0])
+
+        tuples = list(zip(batch['mix_data_object'], batch['s1_data_object'], batch['s2_data_object'], 
+                          batch['s1_pred_object'], batch['s2_pred_object']))
+        shuffle(tuples)
+
+        for idx, mix, s1, s2, pred1, pred2 in enumerate(tuples[:examples_to_log]):
+            result[idx] = {
+                "mixed": self.writer.wandb.Audio(mix.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
+                "target_1": self.writer.wandb.Audio(s1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
+                "target_2": self.writer.wandb.Audio(s2.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
+                "pred_1": self.writer.wandb.Audio(pred1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
+                "pred_2": self.writer.wandb.Audio(pred2.squeeze(0).detach().cpu().numpy(), sample_rate=16000)
+            }
+        self.writer.add_table("predictions", pd.DataFrame.from_dict(result, orient="index"))
+                
+
