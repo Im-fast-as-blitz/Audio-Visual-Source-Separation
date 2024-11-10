@@ -17,11 +17,12 @@ class BlockConv1D(nn.Module):
         self.next_block_conv = nn.Conv1d(out_channels, in_channels, 1, bias=True)
         self.skip_con_conv = nn.Conv1d(out_channels, sc_out_channels, 1, bias=True)
 
-    def forward(self, x, skip_x):
+    def forward(self, input_data):
+        x, skip_x = input_data
         tmp = self.block(x)
-        tmp = self.next_block_conv(tmp)
+        new_x = self.next_block_conv(tmp)
         new_skip_x = self.skip_con_conv(tmp)
-        return x + tmp, new_skip_x + skip_x
+        return (x + new_x, new_skip_x + skip_x)
     
     def __str__(self):
         """
@@ -78,6 +79,7 @@ class ConvTasNetModel(nn.Module):
         super().__init__()
 
         self.num_speakers = num_speakers
+        self.Sc = Sc
 
         self.encoder = nn.Conv1d(1, N, L, stride=L // 2)
         
@@ -89,7 +91,8 @@ class ConvTasNetModel(nn.Module):
         self.tcn = nn.Sequential()
         for _ in range(R):
             for j in range(X):
-                self.tcn.append(BlockConv1D(B, H, P, j**2, Sc))
+                self.tcn.append(BlockConv1D(B, H, P, 2**j, Sc))
+
         self.end_separ = nn.Sequential(
             nn.PReLU(),
             nn.Conv1d(Sc, N * num_speakers, 1),
@@ -109,12 +112,13 @@ class ConvTasNetModel(nn.Module):
             output (dict): output dict containing logits.
         """
         # encoder
+        mix_data_object = torch.unsqueeze(mix_data_object, 1)
         x = self.encoder(mix_data_object)
 
         # separator
         emb = self.start_separ(x)
 
-        _, separ_emb = self.tcn(emb)
+        _, separ_emb = self.tcn((emb, 0))
 
         masks = self.end_separ(separ_emb)
         masks = torch.chunk(masks, chunks=self.num_speakers, dim=1)
@@ -122,7 +126,8 @@ class ConvTasNetModel(nn.Module):
         masked_emb = [x * masks[i] for i in range(self.num_speakers)]
 
         # decder
-        result = [self.decoder(masked_emb[i]) for i in range(self.num_spks)]
+        result = [torch.squeeze(self.decoder(masked_emb[i]), 1) for i in range(self.num_speakers)]
+        print(len(result), result[0].shape)
         return result
 
     def __str__(self):
