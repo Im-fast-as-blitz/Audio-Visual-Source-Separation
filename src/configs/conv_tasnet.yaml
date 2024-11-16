@@ -1,7 +1,7 @@
 defaults:
   - model: conv_tasnet
   - writer: wandb
-  - metrics: example
+  - metrics: test_it_works
   - datasets: train_dataset
   - dataloader: example
   - transforms: example
@@ -17,7 +17,7 @@ lr_scheduler:
   epochs: ${trainer.n_epochs}
   anneal_strategy: cos
 loss_function:
-  _target_: src.loss.ExampleLoss
+  _target_: src.loss.SI_SNR
 trainer:
   log_step: 50
   n_epochs: 100
