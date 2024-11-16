@@ -108,8 +108,8 @@ class СustomAudioDataset(BaseDataset):
             instance_data = {"mix_data_object": mix_data_object}
 
         if self._use_mouths:
-            mouth_data_s1 = load(data_dict["path_mouth_s1"]).files[0]["data"]
-            mouth_data_s2 = load(data_dict["path_mouth_s2"]).files[0]["data"]
+            mouth_data_s1 = load(data_dict["path_mouth_s1"])["data"]
+            mouth_data_s2 = load(data_dict["path_mouth_s2"])["data"]
             instance_data["mouth_s1"] = mouth_data_s1
             instance_data["mouth_s2"] = mouth_data_s2
         return instance_data
