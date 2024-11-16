@@ -1,12 +1,13 @@
-import logging
-from typing import List, Optional
 import json
+import logging
 import os
 from pathlib import Path
-from src.utils.io_utils import ROOT_PATH
-from src.datasets.base_dataset import BaseDataset
+from typing import List, Optional
+
 from numpy import load
 
+from src.datasets.base_dataset import BaseDataset
+from src.utils.io_utils import ROOT_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,20 @@ class СustomAudioDataset(BaseDataset):
     """
 
     def __init__(
-        self, part: str, dir: Optional[str], use_mouths: bool = False, *args, **kwargs
+        self,
+        part: str,
+        dir: Optional[str],
+        mouth_emb_dir: Optional[str] = None,
+        use_mouths: bool = False,
+        *args,
+        **kwargs,
     ):
         if dir is None:
             data_dir = ROOT_PATH / "data" / "dla_dataset" / "audio"
         else:
             data_dir = ROOT_PATH / dir
         data_dir.mkdir(exist_ok=True, parents=True)
+        self.mouth_emb_dir = mouth_emb_dir
         self._data_dir = data_dir
         self._part = part
         self._use_mouths = use_mouths
@@ -47,7 +55,7 @@ class СustomAudioDataset(BaseDataset):
         split_dir = self._data_dir / "audio" / part
 
         mix_dir = split_dir / "mix"
-        mouth_dir = self._data_dir / "mouths"
+        mouth_dir = self.mouth_emb_dir
         if part == "train" or part == "val":
             s1_dir = split_dir / "s1"
             s2_dir = split_dir / "s2"
@@ -55,21 +63,25 @@ class СustomAudioDataset(BaseDataset):
         for root, _, files in os.walk(mix_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                mouth_path_s1 = os.path.join(mouth_dir, file.split('_')[0]) + '.npz'
-                mouth_path_s2 = os.path.join(mouth_dir, file.split('_')[1]).replace('.wav', '.npz')
+                mouth_path_s1 = os.path.join(mouth_dir, file.split("_")[0]) + ".npz"
+                mouth_path_s2 = os.path.join(mouth_dir, file.split("_")[1]).replace(
+                    ".wav", ".npz"
+                )
 
                 paths = {
-                         "path_mix": file_path, 
-                         "path_mouth_s1": mouth_path_s1,
-                         "path_mouth_s2": mouth_path_s2
-                        }
+                    "path_mix": file_path,
+                    "path_mouth_s1": mouth_path_s1,
+                    "path_mouth_s2": mouth_path_s2,
+                }
                 if part == "train" or part == "val":
                     s1_path = os.path.join(s1_dir, file)
                     s2_path = os.path.join(s2_dir, file)
-                    paths.update({
+                    paths.update(
+                        {
                             "path_s1": s1_path,
                             "path_s2": s2_path,
-                        })
+                        }
+                    )
 
                 index.append(paths)
 
@@ -94,10 +106,10 @@ class СustomAudioDataset(BaseDataset):
             }
         else:
             instance_data = {"mix_data_object": mix_data_object}
-        
+
         if self._use_mouths:
-            mouth_data_s1 = load(data_dict["path_mouth_s1"])
-            mouth_data_s2 = load(data_dict["path_mouth_s2"])
+            mouth_data_s1 = load(data_dict["path_mouth_s1"]).files[0]["data"]
+            mouth_data_s2 = load(data_dict["path_mouth_s2"]).files[0]["data"]
             instance_data["mouth_s1"] = mouth_data_s1
             instance_data["mouth_s2"] = mouth_data_s2
         return instance_data
