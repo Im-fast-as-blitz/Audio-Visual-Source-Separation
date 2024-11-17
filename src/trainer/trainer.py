@@ -82,7 +82,7 @@ class Trainer(BaseTrainer):
 
     def _log_audio(self, batch, examples_to_log=8):
         result = {}
-        examples_to_log = min(examples_to_log, batch['mix_data_oject'].shape[0])
+        examples_to_log = min(examples_to_log, batch['mix_data_object'].shape[0])
 
         tuples = list(zip(batch['mix_data_object'], batch['s1_data_object'], batch['s2_data_object'], 
                           batch['s1_pred_object'], batch['s2_pred_object']))
