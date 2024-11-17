@@ -88,7 +88,7 @@ class Trainer(BaseTrainer):
                           batch['s1_pred_object'], batch['s2_pred_object']))
         shuffle(tuples)
 
-        for idx, mix, s1, s2, pred1, pred2 in enumerate(tuples[:examples_to_log]):
+        for idx, (mix, s1, s2, pred1, pred2) in enumerate(tuples[:examples_to_log]):
             result[idx] = {
                 "mixed": self.writer.wandb.Audio(mix.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
                 "target_1": self.writer.wandb.Audio(s1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
