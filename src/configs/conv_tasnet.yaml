@@ -4,7 +4,7 @@ defaults:
   - metrics: test_it_works
   - datasets: train_dataset
   - dataloader: example
-  - transforms: example
+  - transforms: example_only_instance
   - _self_
 optimizer:
   _target_: torch.optim.Adam
