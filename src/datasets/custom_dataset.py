@@ -63,16 +63,21 @@ class СustomAudioDataset(BaseDataset):
         for root, _, files in os.walk(mix_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                mouth_path_s1 = os.path.join(mouth_dir, file.split("_")[0]) + ".npz"
-                mouth_path_s2 = os.path.join(mouth_dir, file.split("_")[1]).replace(
-                    ".wav", ".npz"
-                )
+                if self._use_mouths:
+                    mouth_path_s1 = os.path.join(mouth_dir, file.split("_")[0]) + ".npz"
+                    mouth_path_s2 = os.path.join(mouth_dir, file.split("_")[1]).replace(
+                        ".wav", ".npz"
+                    )
 
-                paths = {
-                    "path_mix": file_path,
-                    "path_mouth_s1": mouth_path_s1,
-                    "path_mouth_s2": mouth_path_s2,
-                }
+                    paths = {
+                        "path_mix": file_path,
+                        "path_mouth_s1": mouth_path_s1,
+                        "path_mouth_s2": mouth_path_s2,
+                    }
+                else:
+                    paths = {
+                        "path_mix": file_path,
+                    }
                 if part == "train" or part == "val":
                     s1_path = os.path.join(s1_dir, file)
                     s2_path = os.path.join(s2_dir, file)
