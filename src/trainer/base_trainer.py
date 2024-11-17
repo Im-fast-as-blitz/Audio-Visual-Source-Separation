@@ -229,7 +229,7 @@ class BaseTrainer:
                     )
                 )
                 self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
+                    "learning rate", self.lr_scheduler.get_last_lr()[0] if epoch > 1 else 1e-3
                 )
                 self._log_scalars(self.train_metrics)
                 self._log_batch(batch_idx, batch)
@@ -245,6 +245,8 @@ class BaseTrainer:
         # Run val/test
         for part, dataloader in self.evaluation_dataloaders.items():
             val_logs = self._evaluation_epoch(epoch, part, dataloader)
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step(val_logs["SI-SNRi"])
             logs.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
 
         return logs

@@ -8,14 +8,14 @@ defaults:
   - _self_
 optimizer:
   _target_: torch.optim.Adam
-  lr: 3e-4
+  lr: 1e-3
+  weight_decay: 1e-5
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.OneCycleLR
-  max_lr: 7e-4
-  pct_start: 0.1
-  steps_per_epoch: ${trainer.epoch_len}
-  epochs: ${trainer.n_epochs}
-  anneal_strategy: cos
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  mode: "max"
+  patience: 2
+  factor: 0.5
+  min_lr: 1e-8
 loss_function:
   _target_: src.loss.SI_SNR
 trainer:
