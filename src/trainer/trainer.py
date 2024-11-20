@@ -3,6 +3,7 @@ import pandas as pd
 from random import shuffle
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
+from src.utils.audio_utils import normalize_audio
 
 
 class Trainer(BaseTrainer):
@@ -93,8 +94,8 @@ class Trainer(BaseTrainer):
                 "mixed": self.writer.wandb.Audio(mix.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
                 "target_1": self.writer.wandb.Audio(s1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
                 "target_2": self.writer.wandb.Audio(s2.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
-                "pred_1": self.writer.wandb.Audio(pred1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
-                "pred_2": self.writer.wandb.Audio(pred2.squeeze(0).detach().cpu().numpy(), sample_rate=16000)
+                "pred_1": self.writer.wandb.Audio(normalize_audio(pred1).squeeze(0).detach().cpu().numpy(), sample_rate=16000),
+                "pred_2": self.writer.wandb.Audio(normalize_audio(pred2).squeeze(0).detach().cpu().numpy(), sample_rate=16000)
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(result, orient="index"))
                 
