@@ -10,10 +10,12 @@ import math
 class ConvNorm(nn.Module):
     def __init__(self, in_chanels, out_chanels,
                 kernel, stride=1, padding=0, dilation=1,
+                use_2d_conv=True,
                 *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
- 
+
         self.conv = nn.Conv2d(in_chanels, out_chanels, kernel,
+                      stride, padding, dilation) if use_2d_conv else nn.Conv1d(in_chanels, out_chanels, kernel,
                       stride, padding, dilation)
     
     def forward(self, x):
@@ -28,15 +30,16 @@ class FFN(nn.Module):
         self,
         in_c, out_c,
         kernel_size = 5, dropout = 0.,
+        use_2d_conv=True,
         *args, **kwargs,
     ):
         super(FFN, self).__init__()
         self.kernel_size = kernel_size
         self.dropout = dropout
 
-        self.conv1 = ConvNorm(in_c, out_c, 1)
-        self.conv2 = ConvNorm(out_c, out_c, kernel_size)
-        self.conv3 = ConvNorm(out_c, in_c, 1)
+        self.conv1 = ConvNorm(in_c, out_c, 1, use_2d_conv=use_2d_conv)
+        self.conv2 = ConvNorm(out_c, out_c, kernel_size, use_2d_conv=use_2d_conv)
+        self.conv3 = ConvNorm(out_c, in_c, 1, use_2d_conv=use_2d_conv)
         self.drop = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor):
@@ -53,6 +56,7 @@ class DualPath(nn.Module):
     def __init__(self, in_c, out_c,
         dim, kernel_size = 8,
         stride = 1, num_layers = 1,
+        use_2d_conv=True,
         *args, **kwargs,
     ):
         super(DualPath, self).__init__()
@@ -66,7 +70,7 @@ class DualPath(nn.Module):
         self.unfold = nn.Unfold((self.kernel_size, 1), stride=(self.stride, 1))
 
         ch = in_c * kernel_size
-        self.ffn = FFN(ch, ch * 2, self.kernel_size, dropout=0.1)
+        self.ffn = FFN(ch, ch * 2, self.kernel_size, dropout=0.1, use_2d_conv=use_2d_conv)
         self.conv = nn.ConvTranspose1d(self.out_c * 2, self.in_chanel, self.kernel_size, stride=self.stride)
 
         self.rnn = SRU(
@@ -113,16 +117,19 @@ class DualPath(nn.Module):
 
 
 class MultiHeadSelfAttention2D(nn.Module):
-    def __init__(self, in_channels, hidden_channels, N=4):
+    def __init__(self, in_channels, hidden_channels, N=4, use_2d_conv=True):
         super().__init__()
 
         self.N = N
 
-        self.q_lay = nn.ModuleList([ConvNorm(in_channels, hidden_channels, kernel_size=1) for i in range(N)])
-        self.k_lay = nn.ModuleList([ConvNorm(in_channels, hidden_channels, kernel_size=1) for i in range(N)])
-        self.v_lay = nn.ModuleList([ConvNorm(in_channels, in_channels // N, kernel_size=1) for i in range(N)])
+        self.q_lay = nn.ModuleList([ConvNorm(in_channels, hidden_channels,
+                                             kernel_size=1, use_2d_conv=use_2d_conv) for _ in range(N)])
+        self.k_lay = nn.ModuleList([ConvNorm(in_channels, hidden_channels,
+                                            kernel_size=1, use_2d_conv=use_2d_conv) for _ in range(N)])
+        self.v_lay = nn.ModuleList([ConvNorm(in_channels, in_channels // N,
+                                            kernel_size=1, use_2d_conv=use_2d_conv) for _ in range(N)])
 
-        self.attn_proj = ConvNorm(in_channels, in_channels, kernel_size=1)
+        self.attn_proj = ConvNorm(in_channels, in_channels, kernel_size=1, use_2d_conv=use_2d_conv)
 
     def forward(self, x):
         b, c, t, f = x.shape
@@ -146,8 +153,9 @@ class MultiHeadSelfAttention2D(nn.Module):
 class Reconstract(nn.Module):
     def __init__(
         self,
-        in_chanel: int,
-        kernel_size: int,
+        in_chanel,
+        kernel_size,
+        use_2d_conv=True,
     ):
         super(Reconstract, self).__init__()
 
@@ -155,15 +163,18 @@ class Reconstract(nn.Module):
             in_chanel=in_chanel,
             out_chan=in_chanel,
             kernel_size=kernel_size,
+            use_2d_conv=use_2d_conv,
         )
         self.conv2 = ConvNorm(
             in_chanel=self.in_chanel,
             out_chan=self.in_chanel,
             kernel_size=self.kernel_size,
+            use_2d_conv=use_2d_conv,
         )
 
+
         self.conv3 = nn.Sequential(
-            nn.Conv2d(in_chanel, in_chanel, kernel_size),
+            nn.Conv2d(in_chanel, in_chanel, kernel_size) if use_2d_conv else nn.Conv1d(in_chanel, in_chanel, kernel_size),
             gLN(),
             nn.Sigmoid()
         )
@@ -191,7 +202,7 @@ class TDABlock(nn.Module):
         self,
         in_chanels: int, out_chanels: int,
         kernel_size: int = 5, stride: int = 2,
-        upsampling_depth: int = 2,
+        upsampling_depth: int = 2, use_2d_conv: bool = True
     ):
         super(TDABlock, self).__init__()
         self.in_chanels = in_chanels
@@ -201,35 +212,33 @@ class TDABlock(nn.Module):
         self.pool = F.adaptive_avg_pool2d
 
         self.skip = ConvNorm(
-            in_chanels, in_chanels, kernel_size=1
+            in_chanels, in_chanels, kernel_size=1, use_2d_conv=use_2d_conv
         )
         self.downsample1 = ConvNorm(
-                                in_chanels, out_chanels, kernel_size=1,
+                                in_chanels, out_chanels, kernel_size=1, use_2d_conv=use_2d_conv
                             )
         self.downsample2 = ConvNorm(
                                 out_chanels, out_chanels,
                                 kernel_size=kernel_size,
-                                stride=0,
+                                stride=0, use_2d_conv=use_2d_conv
                             )
         self.downsample3 = ConvNorm(
                                 out_chanels, out_chanels,
                                 kernel_size=kernel_size,
-                                stride=stride,
+                                stride=stride, use_2d_conv=use_2d_conv
                             )
 
-        self.dualpath1 = DualPath(out_chanels, 32, 4, 8, 1)  # magic constans :)
-        self.dualpath2 = DualPath(out_chanels, 32, 3, 8, 1)
-        self.attention = MultiHeadSelfAttention2D(3, 64, 4, 4)
+        self.dualpath1 = DualPath(out_chanels, 32, 4, 8, 1, use_2d_conv=use_2d_conv)  # magic constans :)
+        self.dualpath2 = DualPath(out_chanels, 32, 3, 8, 1, use_2d_conv=use_2d_conv)
+        self.attention = MultiHeadSelfAttention2D(3, 64, 4, 4, use_2d_conv=use_2d_conv)
 
-        self.recon1_1 = Reconstract(out_chanels, kernel_size)
-        self.recon1_2 = Reconstract(out_chanels, kernel_size)
+        self.recon1_1 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
+        self.recon1_2 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
 
-        self.recon2 = Reconstract()
-        self.fusion_layers = self.__build_fusion_layers()
-        self.concat_layers = self.__build_concat_layers()
+        self.recon2 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
         self.residual_conv = ConvNorm(
-            out_chanels, in_chanels, 1,
-        )
+                    out_chanels, in_chanels, 1, use_2d_conv=use_2d_conv
+                )
 
     def forward(self, x: torch.Tensor):
         skip = self.skip(x)
