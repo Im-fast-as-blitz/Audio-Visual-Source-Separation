@@ -197,14 +197,14 @@ class Reconstract(nn.Module):
         return injection_sum
 
 
-class TDABlock(nn.Module):
+class RTFSBlock(nn.Module):
     def __init__(
         self,
         in_chanels: int, out_chanels: int,
         kernel_size: int = 5, stride: int = 2,
         upsampling_depth: int = 2, use_2d_conv: bool = True
     ):
-        super(TDABlock, self).__init__()
+        super(RTFSBlock, self).__init__()
         self.in_chanels = in_chanels
         self.out_chanels = out_chanels
         self.upsampling_depth = upsampling_depth

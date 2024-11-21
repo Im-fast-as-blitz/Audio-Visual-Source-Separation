@@ -1,44 +1,8 @@
 import torch
 from torch import nn
+
 from conv_tasnet import gLN
-
-
-class RTFSBlock(nn.Module):
-    def __init__(self, ):
-        """
-        Args:
-        
-        
-        """
-        super().__init__()
-        
-
-    def forward(self, mix_data_object, mouth_emb, **batch):
-        """
-        Model forward method.
-
-        Args:
-            data_object (Tensor): input vector.
-        Returns:
-            output (dict): output dict containing logits.
-        """
-        
-        
-
-    def __str__(self):
-        """
-        Model prints with the number of parameters.
-        """
-        all_parameters = sum([p.numel() for p in self.parameters()])
-        trainable_parameters = sum(
-            [p.numel() for p in self.parameters() if p.requires_grad]
-        )
-
-        result_info = super().__str__()
-        result_info = result_info + f"\nAll parameters: {all_parameters}"
-        result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
-
-        return result_info
+from rtfs_block import RTFSBlock
 
 
 class SSS(nn.Module):
@@ -226,14 +190,14 @@ class RTFSNetModel(nn.Module):
         """
         super().__init__()
 
-        self.encoder = Encoder()
+        self.encoder = Encoder(in_chanels=, out_chanels=)
 
-        self.ap = RTFSBlock()
-        self.vp = RTFSd1dBlock()
+        self.ap = RTFSBlock(in_chanels=, out_chanels=, kernel_size = 5, stride = 2, upsampling_depth = 2, use_2d_conv = True)
+        self.vp = RTFSBlock(in_chanels=, out_chanels=, kernel_size = 5, stride = 2, upsampling_depth = 2, use_2d_conv = False)   # 1d conv
 
         self.decoder = nn.ConvTranspose2d(, 2, 3)
 
-        self.caf = CAF()
+        self.caf = CAF(Ca=)
 
         
 
@@ -251,9 +215,11 @@ class RTFSNetModel(nn.Module):
         a1 = self.ap(a0)
         v1 = self.vp(mouth_emb)
 
-        a2 = self.caf(a1, v1)
+        aR = self.caf(a1, v1)
 
-        aR = self.rtfs_blocks(a2, a0)
+        # rtfs blocks
+        for i in range(self.R):
+            aR = self.ap(aR + a0)
 
         z = self.SSS(aR, a0)
 
