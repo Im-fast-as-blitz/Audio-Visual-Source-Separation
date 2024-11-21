@@ -76,12 +76,25 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # self._log_audio(batch)
-            pass
-        else:
             self._log_audio(batch)
+        else:
+            self._log_preds(batch)
 
     def _log_audio(self, batch, examples_to_log=8):
+        result = {}
+        examples_to_log = min(examples_to_log, batch['mix_data_object'].shape[0])
+
+        tuples = list(batch['mix_data_object'])
+        shuffle(tuples)
+
+        for idx, mix in enumerate(tuples[:examples_to_log]):
+            result[idx] = {
+                "mixed": self.writer.wandb.Audio(mix.squeeze(0).detach().cpu().numpy(), sample_rate=16000)
+            }
+        self.writer.add_table("mixed audio", pd.DataFrame.from_dict(result, orient="index"))
+
+
+    def _log_preds(self, batch, examples_to_log=8):
         result = {}
         examples_to_log = min(examples_to_log, batch['mix_data_object'].shape[0])
 
