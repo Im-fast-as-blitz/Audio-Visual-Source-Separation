@@ -1,14 +1,13 @@
 import torch
 from torchmetrics.audio import SignalDistortionRatio
 from src.metrics.base_metric import BaseMetric
-from src.utils.audio_utils import normalize_audio
 import itertools
 import numpy as np
 
 class SDR(BaseMetric):
     def __init__(self, device:str, *args, **kwargs):
         """
-        Computes SDR metric
+        Computes SDRi metric
 
         Args:
             device (str): device for the metric calculation (and tensors).
@@ -60,7 +59,7 @@ class SDRi(BaseMetric):
             for perm in itertools.permutations(range(self.num_speakers)):
                 curr_metric = 0
                 for ind_target, ind_pred in enumerate(perm):
-                    curr_metric += self.metric(normalize_audio(kwargs[f"s{ind_pred+1}_pred_object"][val_ind]), normalize_audio(kwargs[f"s{ind_target+1}_data_object"][val_ind])) - self.metric(normalize_audio(kwargs["mix_data_object"][val_ind]), normalize_audio(kwargs[f"s{ind_target+1}_data_object"][val_ind]))
+                    curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind]) - self.metric(kwargs["mix_data_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind])
                 metrics.append(curr_metric / self.num_speakers)
             batch_metrics.append(np.max(metrics))
         return np.mean(batch_metrics)
