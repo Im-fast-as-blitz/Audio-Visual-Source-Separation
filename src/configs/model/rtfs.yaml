@@ -1,7 +1,7 @@
 _target_: src.model.RTFSNetModel
 Ca: 256
 n_fft: 256
-hop_length: 128
+hop_length: 64
 hidden_channels: 64
 kernel_size: 3
 caf_heads: 4

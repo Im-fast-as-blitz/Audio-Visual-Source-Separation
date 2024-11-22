@@ -75,17 +75,17 @@ class CAF(nn.Module):
         
         self.p1 = nn.Sequential(
             nn.Conv2d(Ca, Ca, 1),
-            gLN(Ca)
+            nn.GroupNorm(num_groups=1, num_channels=Ca, eps=1e-6)
         )
         self.p2 = nn.Sequential(
             nn.Conv2d(Ca, Ca, 1),
-            gLN(Ca),
+            nn.GroupNorm(num_groups=1, num_channels=Ca, eps=1e-6),
             nn.ReLU()
         )
 
         self.f1 = nn.Sequential(
             nn.Conv1d(Cv, Ca * h, 1),
-            gLN(Ca)
+            gLN(Ca * h)
         )
 
         self.f2= nn.Sequential(
@@ -104,17 +104,19 @@ class CAF(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
+        print("INIT SAF", a.shape, v.shape)
         a_val = self.p1(a)
         a_gate = self.p2(a)
 
         v_key = self.f2(v)
 
         vh = self.f1(v)
-        vm = torch.mean(torch.chunk(vh, chunks=self.h, dim=1))
+        vm = sum(torch.chunk(vh, chunks=self.h, dim=1)) / self.h
 
         v_attn = nn.functional.softmax(vm)
-        f1 = a_val * nn.functional.interpolate(v_attn, (v_attn.shape[0], v_attn.shape[1], a_val.shape[2]))
-        f2 = a_gate * nn.functional.interpolate(v_key, (v_key.shape[0], v_key.shape[1], a_val.shape[2]))
+        print("CAF", v_attn.shape, a_val.shape)
+        f1 = a_val * nn.functional.interpolate(v_attn, a_val.shape[2]).unsqueeze(-1)
+        f2 = a_gate * nn.functional.interpolate(v_key, a_val.shape[2]).unsqueeze(-1)
 
         return f1 + f2
         
@@ -161,9 +163,9 @@ class Encoder(nn.Module):
         """
         # print("emb lol", x.shape)
         x = torch.stft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), return_complex=True, center=True)
-        # print("emb lol", x.shape)
+        print("emb lol", x.shape)
         x = torch.stack([x.real, x.imag], 1).transpose(2, 3).contiguous() 
-        # print("emb lel", x.shape)
+        print("emb lel", x.shape)
         return self.conv(x) 
         
 
@@ -240,7 +242,7 @@ class RTFSNetModel(nn.Module):
     Conv-TasNet model
     """
 
-    def __init__(self, Ca=256, n_fft=256, hop_length=128, hidden_channels=64, kernel_size=3, caf_heads=4):
+    def __init__(self, Ca=512, n_fft=256, hop_length=128, hidden_channels=64, kernel_size=3, caf_heads=4, vp_ch=50):
         """
         Args:
         
@@ -250,10 +252,10 @@ class RTFSNetModel(nn.Module):
 
         self.encoder = Encoder(in_chanels=2, out_chanels=Ca, n_fft=n_fft, hop_length=hop_length)
 
-        self.vp = RTFSBlock(in_chanels=Ca, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=4, n_heads=8, use_2d_conv=False)  # 1d conv
+        self.vp = RTFSBlock(in_chanels=vp_ch, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=4, n_heads=8, use_2d_conv=False, visual_part=True)  # 1d conv
         self.ap = RTFSBlock(in_chanels=Ca, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=2, sru_num_layers=4, use_2d_conv=True)
 
-        self.caf = CAF(Ca=Ca, Cv=Ca, h=caf_heads)
+        self.caf = CAF(Ca=Ca, Cv=vp_ch, h=caf_heads)
 
         self.decoder = Decoder(in_chanels=10, n_fft=n_fft, hop_length=hop_length)
         
@@ -267,14 +269,15 @@ class RTFSNetModel(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
-        paddings = torch.zeros(mix_data_object.shape[0], 640)
+        paddings = torch.zeros(mix_data_object.shape[0], 704)
         mix_data_object = torch.cat([mix_data_object, paddings], dim=1)
 
         # mouth_s1
         a0 = self.encoder(mix_data_object)
         print("a0", a0.shape)
-
         a1 = self.ap(a0)
+        print("a1", a1.shape)
+        print("lol", mouth_s1.shape)
         v1 = self.vp(mouth_s1)
 
         aR = self.caf(a1, v1)
