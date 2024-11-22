@@ -35,5 +35,11 @@ def collate_fn(dataset_items: list[dict]):
     else:
         result_batch["s1_data_object"] = torch.tensor([])
         result_batch["s2_data_object"] = torch.tensor([])
-
+    if "mouth_s1" in dataset_items[0]:
+        result_batch["mouth_s1"] = pad_sequence(
+            [torch.Tensor(item["mouth_s1"]).squeeze(0) for item in dataset_items], batch_first=True
+        )
+        result_batch["mouth_s2"] = pad_sequence(
+            [torch.Tensor(item["mouth_s2"]).squeeze(0) for item in dataset_items], batch_first=True
+        )
     return result_batch

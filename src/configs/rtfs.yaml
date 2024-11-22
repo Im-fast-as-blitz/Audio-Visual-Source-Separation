@@ -2,7 +2,7 @@ defaults:
   - model: rtfs
   - writer: wandb
   - metrics: test_it_works
-  - datasets: train_dataset
+  - datasets: train_rtfs
   - dataloader: example
   - transforms: example_only_instance
   - _self_
@@ -22,7 +22,7 @@ trainer:
   log_step: 50
   n_epochs: 100
   epoch_len: 200
-  device_tensors: ["mix_data_object", "s1_data_object", "s2_data_object"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["mix_data_object", "s1_data_object", "s2_data_object", "mouth_s1", "mouth_s2"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
   override: True # if True, will override the previous run with the same name

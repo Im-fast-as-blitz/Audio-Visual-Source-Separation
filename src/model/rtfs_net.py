@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from conv_tasnet import gLN
-from rtfs_block import RTFSBlock
+from src.model import RTFSBlock
+from src.model import gLN
 
 
 class SSS(nn.Module):
@@ -147,7 +147,8 @@ class Encoder(nn.Module):
         self.n_fft = n_fft
         self.hop_length = hop_length
         
-        self.conv = nn.Conv2d(in_chanels, out_chanels, (3, 3))
+        self.conv = nn.Conv2d(in_chanels, out_chanels, (3, 3), padding=1)
+        self.window = torch.hann_window(n_fft)
 
     def forward(self, x):
         """
@@ -158,10 +159,11 @@ class Encoder(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
-        print("emb lol", x.shape)
-        x = torch.stft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), return_complex=True)
-        print("emb lol", x.shape)
+        # print("emb lol", x.shape)
+        x = torch.stft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), return_complex=True, center=True)
+        # print("emb lol", x.shape)
         x = torch.stack([x.real, x.imag], 1).transpose(2, 3).contiguous() 
+        # print("emb lel", x.shape)
         return self.conv(x) 
         
 
@@ -191,9 +193,10 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.n_fft = n_fft
-        self.hop_length
+        self.hop_length = hop_length
         
         self.conv = nn.ConvTranspose2d(in_chanels, 2, 3, padding=1)
+        self.window = torch.hann_window(n_fft)
 
     def forward(self, x, audio_length=32000):
         """
@@ -245,7 +248,7 @@ class RTFSNetModel(nn.Module):
         """
         super().__init__()
 
-        self.encoder = Encoder(in_chanels=1, out_chanels=Ca, n_fft=n_fft, hop_length=hop_length)
+        self.encoder = Encoder(in_chanels=2, out_chanels=Ca, n_fft=n_fft, hop_length=hop_length)
 
         self.vp = RTFSBlock(in_chanels=Ca, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=4, n_heads=8, use_2d_conv=False)  # 1d conv
         self.ap = RTFSBlock(in_chanels=Ca, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=2, sru_num_layers=4, use_2d_conv=True)
@@ -255,7 +258,7 @@ class RTFSNetModel(nn.Module):
         self.decoder = Decoder(in_chanels=10, n_fft=n_fft, hop_length=hop_length)
         
 
-    def forward(self, mix_data_object, mouth_emb, **batch):
+    def forward(self, mix_data_object, mouth_s1, mouth_s2, **batch):
         """
         Model forward method.
 
@@ -264,10 +267,15 @@ class RTFSNetModel(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
+        paddings = torch.zeros(mix_data_object.shape[0], 640)
+        mix_data_object = torch.cat([mix_data_object, paddings], dim=1)
+
+        # mouth_s1
         a0 = self.encoder(mix_data_object)
+        print("a0", a0.shape)
 
         a1 = self.ap(a0)
-        v1 = self.vp(mouth_emb)
+        v1 = self.vp(mouth_s1)
 
         aR = self.caf(a1, v1)
 
@@ -277,9 +285,24 @@ class RTFSNetModel(nn.Module):
 
         z = self.SSS(aR, a0)
 
-        z = self.decoder(z)
-        torch.istft
-        return s
+        spk_1 = self.decoder(z)
+
+        # mouth_s2
+        a0 = self.encoder(mix_data_object)
+
+        a1 = self.ap(a0)
+        v1 = self.vp(mouth_s2)
+
+        aR = self.caf(a1, v1)
+
+        # rtfs blocks
+        for i in range(self.R):
+            aR = self.ap(aR + a0)
+
+        z = self.SSS(aR, a0)
+
+        spk_2 = self.decoder(z)
+        return {"s1_pred_object": spk_1, "s2_pred_object": spk_2}
         
 
     def __str__(self):

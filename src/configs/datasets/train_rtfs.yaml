@@ -1,0 +1,12 @@
+train:
+  _target_: src.datasets.СustomAudioDataset
+  part: "train"
+  dir: "dla_dataset"
+  use_mouth: True
+  mouth_emb_dir: "dla_dataset/mouths_embeds"
+val:
+  _target_: src.datasets.СustomAudioDataset
+  part: "val"
+  dir: "dla_dataset"
+  use_mouth: True
+  mouth_emb_dir: "dla_dataset/mouths_embeds"

@@ -2,26 +2,29 @@ import torch
 import torch.nn as nn
 from torch.nn import Sequential
 import torch.nn.functional as F
-from conv_tasnet import gLN
 from sru import SRU
 import math
 
+from src.model import gLN
+
 
 class ConvNorm(nn.Module):
-    def __init__(self, in_chanels, out_chanels,
-                kernel, stride=1, padding=0, dilation=1,
+    def __init__(self, in_chanel, out_chanels,
+                kernel_size=1, stride=1, padding=0, dilation=1, groups=1,
                 use_2d_conv=True,
-                *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+                ) -> None:
+        super().__init__()
 
-        self.conv = nn.Conv2d(in_chanels, out_chanels, kernel,
-                      stride, padding, dilation) if use_2d_conv else nn.Conv1d(in_chanels, out_chanels, kernel,
+        self.conv = nn.Conv2d(in_chanel, out_chanels, kernel_size,
+                      stride, padding, dilation, groups=groups) if use_2d_conv else nn.Conv1d(in_chanel, out_chanels, kernel_size,
                       stride, padding, dilation)
+        # self.norm = gLN(out_chanels)
+        self.norm = nn.GroupNorm(num_groups=1, num_channels=out_chanels, eps=1e-6)
     
     def forward(self, x):
         x = self.conv(x)
-        x = gLN(x)
-        x = nn.PReLU(x)
+        x = self.norm(x)
+        x = nn.PReLU()(x)
         return x
 
 
@@ -44,6 +47,7 @@ class FFN(nn.Module):
 
     def forward(self, x: torch.Tensor):
         skip = x
+        print("FFN FLAG", x.shape)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.drop(x)
@@ -69,16 +73,18 @@ class DualPath(nn.Module):
 
         self.unfold = nn.Unfold((self.kernel_size, 1), stride=(self.stride, 1))
 
-        ch = in_c * kernel_size
+        # ch = in_c * kernel_size
+        ch = in_c
         self.ffn = FFN(ch, ch * 2, self.kernel_size, dropout=0.1, use_2d_conv=use_2d_conv)
-        self.conv = nn.ConvTranspose1d(self.out_c * 2, self.in_chanel, self.kernel_size, stride=self.stride)
+        self.conv = nn.ConvTranspose1d(out_c * 2, in_c, self.kernel_size, stride=self.stride)
 
         self.rnn = SRU(
-            input_size=ch,
-            hidden_size=self.hid_chan,
+            input_size=ch * kernel_size,
+            hidden_size=out_c,
             num_layers=self.num_layers,
             bidirectional=True,
         )
+        self.norm = nn.GroupNorm(num_groups=1, num_channels=in_c, eps=1e-6)
 
     def forward(self, x):
         if self.dim == 4:
@@ -96,9 +102,12 @@ class DualPath(nn.Module):
         x = self.unfold(x)
 
         x = x.permute(2, 0, 1)
+        print("before rnn", x.shape)
         x = self.rnn(x)[0]
+        print("after rnn", x.shape)
 
         x = x.permute(1, 2, 0)
+        print(f"dual ffn {x.shape}")
         x = self.ffn(x)
         x = self.conv(x)
 
@@ -157,25 +166,25 @@ class Reconstract(nn.Module):
         kernel_size,
         use_2d_conv=True,
     ):
-        super(Reconstract, self).__init__()
+        super().__init__()
 
         self.conv1 = ConvNorm(
             in_chanel=in_chanel,
-            out_chan=in_chanel,
+            out_chanels=in_chanel,
             kernel_size=kernel_size,
             use_2d_conv=use_2d_conv,
         )
         self.conv2 = ConvNorm(
-            in_chanel=self.in_chanel,
-            out_chan=self.in_chanel,
-            kernel_size=self.kernel_size,
+            in_chanel=in_chanel,
+            out_chanels=in_chanel,
+            kernel_size=kernel_size,
             use_2d_conv=use_2d_conv,
         )
 
 
         self.conv3 = nn.Sequential(
             nn.Conv2d(in_chanel, in_chanel, kernel_size) if use_2d_conv else nn.Conv1d(in_chanel, in_chanel, kernel_size),
-            gLN(),
+            nn.GroupNorm(num_groups=1, num_channels=in_chanel, eps=1e-6),
             nn.Sigmoid()
         )
 
@@ -202,7 +211,9 @@ class RTFSBlock(nn.Module):
         self,
         in_chanels: int, out_chanels: int,
         kernel_size: int = 5, stride: int = 2,
-        upsampling_depth: int = 2, use_2d_conv: bool = True
+        upsampling_depth: int = 2, n_heads: int = 4,
+        use_2d_conv: bool = True,
+        sru_num_layers=4,
     ):
         super(RTFSBlock, self).__init__()
         self.in_chanels = in_chanels
@@ -210,27 +221,28 @@ class RTFSBlock(nn.Module):
         self.upsampling_depth = upsampling_depth
  
         self.pool = F.adaptive_avg_pool2d
-
         self.skip = ConvNorm(
-            in_chanels, in_chanels, kernel_size=1, use_2d_conv=use_2d_conv
+            in_chanels, in_chanels, kernel_size=1, groups=in_chanels, use_2d_conv=use_2d_conv
         )
         self.downsample1 = ConvNorm(
-                                in_chanels, out_chanels, kernel_size=1, use_2d_conv=use_2d_conv
+                                in_chanels, out_chanels, kernel_size=1, stride=1,  use_2d_conv=use_2d_conv
                             )
+        
         self.downsample2 = ConvNorm(
                                 out_chanels, out_chanels,
                                 kernel_size=kernel_size,
-                                stride=0, use_2d_conv=use_2d_conv
+                                stride=stride,
+                                use_2d_conv=use_2d_conv
                             )
         self.downsample3 = ConvNorm(
                                 out_chanels, out_chanels,
                                 kernel_size=kernel_size,
                                 stride=stride, use_2d_conv=use_2d_conv
                             )
-
-        self.dualpath1 = DualPath(out_chanels, 32, 4, 8, 1, use_2d_conv=use_2d_conv)  # magic constans :)
-        self.dualpath2 = DualPath(out_chanels, 32, 3, 8, 1, use_2d_conv=use_2d_conv)
-        self.attention = MultiHeadSelfAttention2D(out_chanels, 64, 4, use_2d_conv=use_2d_conv)
+        
+        self.dualpath1 = DualPath(out_chanels, 32, 4, 8, 1, sru_num_layers, use_2d_conv=use_2d_conv)  # magic constans :)
+        self.dualpath2 = DualPath(out_chanels, 32, 3, 8, 1, sru_num_layers, use_2d_conv=use_2d_conv)
+        self.attention = MultiHeadSelfAttention2D(out_chanels, 64, n_heads, use_2d_conv=use_2d_conv)
 
         self.recon1_1 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
         self.recon1_2 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
