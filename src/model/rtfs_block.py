@@ -201,7 +201,7 @@ class RTFSBlock(nn.Module):
     def __init__(
         self,
         in_chanels: int, out_chanels: int,
-        kernel_size: int = 5, n_heads:int = 4,
+        kernel_size: int = 5, stride: int = 2,
         upsampling_depth: int = 2, use_2d_conv: bool = True
     ):
         super(RTFSBlock, self).__init__()
@@ -225,16 +225,12 @@ class RTFSBlock(nn.Module):
         self.downsample3 = ConvNorm(
                                 out_chanels, out_chanels,
                                 kernel_size=kernel_size,
-                                stride=2, use_2d_conv=use_2d_conv
+                                stride=stride, use_2d_conv=use_2d_conv
                             )
 
         self.dualpath1 = DualPath(out_chanels, 32, 4, 8, 1, use_2d_conv=use_2d_conv)  # magic constans :)
         self.dualpath2 = DualPath(out_chanels, 32, 3, 8, 1, use_2d_conv=use_2d_conv)
-<<<<<<< HEAD
-        self.attention = MultiHeadSelfAttention2D(32, 64, n_heads, use_2d_conv=use_2d_conv)
-=======
         self.attention = MultiHeadSelfAttention2D(out_chanels, 64, 4, use_2d_conv=use_2d_conv)
->>>>>>> e7f657691f79f4f45fadbd10061e0fa07f8ab955
 
         self.recon1_1 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
         self.recon1_2 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
@@ -267,19 +263,3 @@ class RTFSBlock(nn.Module):
         out = self.residual_conv(expanded) + skip
 
         return out
-
-    def __str__(self):
-        """
-        Model prints with the number of parameters.
-        """
-        all_parameters = sum([p.numel() for p in self.parameters()])
-        trainable_parameters = sum(
-            [p.numel() for p in self.parameters() if p.requires_grad]
-        )
-
-        result_info = super().__str__()
-        result_info = result_info + f"\nAll parameters: {all_parameters}"
-        result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
-
-        return result_info
-
