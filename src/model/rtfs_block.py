@@ -6,8 +6,6 @@ from sru import SRU
 import math
 import numpy as np
 
-from src.model import gLN
-
 
 class ConvNorm(nn.Module):
     def __init__(self, in_chanel, out_chanels,
@@ -50,11 +48,9 @@ class FFN(nn.Module):
     def forward(self, x: torch.Tensor):
         skip = x
         x = self.conv1(x)
-        print("conv2", x.shape)
         x = self.conv2(x)
         x = self.drop(x)
         x = self.conv3(x)
-        print(f"{skip.shape}, x.shape {x.shape}")
         x = self.drop(x) + skip
         return x
 
@@ -90,7 +86,6 @@ class DualPath(nn.Module):
         self.norm = nn.GroupNorm(num_groups=1, num_channels=in_c, eps=1e-6)
 
     def forward(self, x):
-        print("init", x.shape)
         if self.dim == 4:
             x = x.transpose(-2, -1)
 
@@ -103,7 +98,6 @@ class DualPath(nn.Module):
         f_out = math.ceil((f_in - self.kernel_size) / self.stride) * self.stride + self.kernel_size
         x = F.pad(x, (0, f_out - f_in, 0, t_out - t_in))
 
-        print(x.shape)
         skip = x
         x = self.norm(x)
 
@@ -149,7 +143,6 @@ class MultiHeadSelfAttention2D(nn.Module):
     def forward(self, x):
         b, c, t, f = x.shape
 
-        print("mul had", x.shape)
         Q = torch.cat([lay(x) for lay in self.q_lay], dim=0).transpose(1, 2).flatten(start_dim=2)
         K = torch.cat([lay(x) for lay in self.k_lay], dim=0).transpose(1, 2).flatten(start_dim=2)
         V = torch.cat([lay(x) for lay in self.v_lay], dim=0).transpose(1, 2).flatten(start_dim=2)
@@ -180,7 +173,6 @@ class PosEncoder(nn.Module):
         self.register_buffer('pos_embedding', pos_embedding)
 
     def forward(self, x):
-        print("pos encoding", x.shape)
         out = x + self.pos_embedding[:, :x.size(1)]
         return out
 
@@ -197,10 +189,6 @@ class MultiHeadSelfAttention1D(nn.Module):
         self.dropout = dropout
         self.batch_first = batch_first
 
-        assert in_ch % n_head == 0, "In channels: {} must be divisible by the number of heads: {}".format(
-            in_ch, n_head
-        ) # TODO DELETE COMMENT
-
         self.norm1 = nn.LayerNorm(in_ch)
         self.norm2 = nn.LayerNorm(in_ch)
 
@@ -213,7 +201,6 @@ class MultiHeadSelfAttention1D(nn.Module):
 
     def forward(self, x: torch.Tensor):
         res = x
-        print("mha", x.shape)
         if self.batch_first:
             x = x.transpose(1, 2)
 
@@ -276,12 +263,10 @@ class Reconstract(nn.Module):
             gate = F.interpolate(self.conv3(skip), size=out_dim, mode="nearest")
         else:
             g_interp = F.interpolate(skip, size=out_dim, mode="nearest")
-            print("PAPA", g_interp.shape)
             out = self.conv2(g_interp)
             gate = self.conv3(g_interp)
 
         tmp = self.conv1(x)
-        print(tmp.shape, gate.shape, out.shape)
         injection_sum = tmp * gate + out
 
         return injection_sum
@@ -338,16 +323,11 @@ class RTFSBlock(nn.Module):
                 )
 
     def forward(self, x: torch.Tensor):
-        print("imput")
         skip = self.skip(x)
 
-        print("before x", x.shape)
         x = self.downsample1(skip)
-        print("x", x.shape)
         down1 = self.downsample2(x)
-        print("down1", down1.shape)
         down2 = self.downsample3(down1)
-        print("down2", down2.shape)
 
         if len(down2.shape) == 4:
             pool_size = (down2.shape[-2], down2.shape[-1])
@@ -360,20 +340,13 @@ class RTFSBlock(nn.Module):
             R = self.dualpath1(R2)
             R2 = self.dualpath2(R)
         A_hat = self.attention(R2)
-        print(A_hat.shape)
 
-        print("MAMA", down2.shape, A_hat.shape)
         A_1_1 = self.recon1_1(down1, A_hat)
         A_1_2 = self.recon1_2(down2, A_hat)
-        print("A11", A_1_1.shape)
-        print("A_1_2", A_1_2.shape)
 
-        # fuse them into a single vector
         expanded = self.recon2(A_1_1, A_1_2) + down1
 
         tmp = self.residual_conv(expanded)
-        print("expanded", tmp.shape)
-        print("skip", skip.shape)
 
         out = tmp + skip
 

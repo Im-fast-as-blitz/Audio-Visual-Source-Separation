@@ -6,15 +6,12 @@ from src.model import gLN
 
 
 class SSS(nn.Module):
-    def __init__(self, Ca):
-        """
-        Args:
-        
-        
-        """
+    def __init__(self, Ca, n_spk=1):
+
         super().__init__()
 
         self.Ca = Ca
+        self.n_spk = n_spk
 
         self.generate_mask = nn.Sequential(
             nn.PReLU(),
@@ -32,18 +29,20 @@ class SSS(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
-        mask = self.generate_mask(ar)
+        bs, L, T = a0.shape[0], a0.shape[-2], a0.shape[-1]
+        
+        mask = self.generate_mask(ar).reshape(bs, self.n_spk, self.Ca, L, T)
 
-        mr = mask[:, 0:(self.Ca / 2 - 1)]
-        mi = mask[:, self.Ca / 2:self.Ca]
+        mr = mask[:, :, :(self.Ca // 2)]
+        mi = mask[:, :, self.Ca // 2:self.Ca]
 
-        Er = a0[:, 0:(self.Ca / 2 - 1)]
-        Ei = a0[:, self.Ca / 2:self.Ca]
+        Er = a0[:, :(self.Ca // 2)].unsqueeze(1)
+        Ei = a0[:, self.Ca // 2:self.Ca].unsqueeze(1)
 
         zr = mr * Er - mi * Ei
         zi = mr * Ei + mi * Er
 
-        return torch.cat([zr, zi], dim=1)
+        return torch.cat([zr, zi], dim=2)
         
 
     def __str__(self):
@@ -114,7 +113,6 @@ class CAF(nn.Module):
         vm = sum(torch.chunk(vh, chunks=self.h, dim=1)) / self.h
 
         v_attn = nn.functional.softmax(vm)
-        print("CAF", v_attn.shape, a_val.shape)
         f1 = a_val * nn.functional.interpolate(v_attn, a_val.shape[2]).unsqueeze(-1)
         f2 = a_gate * nn.functional.interpolate(v_key, a_val.shape[2]).unsqueeze(-1)
 
@@ -161,11 +159,8 @@ class Encoder(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
-        # print("emb lol", x.shape)
         x = torch.stft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), return_complex=True, center=True)
-        print("emb lol", x.shape)
         x = torch.stack([x.real, x.imag], 1).transpose(2, 3).contiguous() 
-        print("emb lel", x.shape)
         return self.conv(x) 
         
 
@@ -213,12 +208,15 @@ class Decoder(nn.Module):
         bs = x.shape[0]
 
         x = x.reshape(x.shape[0] * x.shape[1], x.shape[2], x.shape[3], x.shape[4])
+
         x = self.conv(x)
         x = torch.complex(x[:, 0], x[:, 1]).transpose(1, 2).contiguous()
 
         x = torch.istft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), length=audio_length)
 
-        return x.reshape(bs, tmp, audio_length) 
+        if tmp == 1:
+            return x.reshape(bs, audio_length)
+        return x.reshape(bs, tmp, audio_length)
         
 
     def __str__(self):
@@ -242,13 +240,14 @@ class RTFSNetModel(nn.Module):
     Conv-TasNet model
     """
 
-    def __init__(self, Ca=512, n_fft=256, hop_length=128, hidden_channels=64, kernel_size=3, caf_heads=4, vp_ch=50):
+    def __init__(self, Ca=512, n_fft=256, hop_length=128, hidden_channels=64, kernel_size=3, caf_heads=4, vp_ch=50, R=4):
         """
         Args:
         
         
         """
         super().__init__()
+        self.R = R
 
         self.encoder = Encoder(in_chanels=2, out_chanels=Ca, n_fft=n_fft, hop_length=hop_length)
 
@@ -257,7 +256,9 @@ class RTFSNetModel(nn.Module):
 
         self.caf = CAF(Ca=Ca, Cv=vp_ch, h=caf_heads)
 
-        self.decoder = Decoder(in_chanels=10, n_fft=n_fft, hop_length=hop_length)
+        self.SSS = SSS(Ca=Ca)
+
+        self.decoder = Decoder(in_chanels=Ca, n_fft=n_fft, hop_length=hop_length)
         
 
     def forward(self, mix_data_object, mouth_s1, mouth_s2, **batch):
@@ -274,21 +275,19 @@ class RTFSNetModel(nn.Module):
 
         # mouth_s1
         a0 = self.encoder(mix_data_object)
-        print("a0", a0.shape)
         a1 = self.ap(a0)
-        print("a1", a1.shape)
-        print("lol", mouth_s1.shape)
         v1 = self.vp(mouth_s1)
 
         aR = self.caf(a1, v1)
 
         # rtfs blocks
-        for i in range(self.R):
+        for _ in range(self.R):
             aR = self.ap(aR + a0)
 
         z = self.SSS(aR, a0)
 
         spk_1 = self.decoder(z)
+        print("SPEAKER", spk_1.shape)
 
         # mouth_s2
         a0 = self.encoder(mix_data_object)
@@ -299,7 +298,7 @@ class RTFSNetModel(nn.Module):
         aR = self.caf(a1, v1)
 
         # rtfs blocks
-        for i in range(self.R):
+        for _ in range(self.R):
             aR = self.ap(aR + a0)
 
         z = self.SSS(aR, a0)
