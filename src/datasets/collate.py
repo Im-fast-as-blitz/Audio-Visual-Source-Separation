@@ -42,4 +42,5 @@ def collate_fn(dataset_items: list[dict]):
         result_batch["mouth_s2"] = pad_sequence(
             [torch.Tensor(item["mouth_s2"]).squeeze(0) for item in dataset_items], batch_first=True
         )
+    result_batch["id"] = [item["id"] for item in dataset_items]
     return result_batch

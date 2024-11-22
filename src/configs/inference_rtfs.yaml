@@ -6,9 +6,9 @@ defaults:
   - transforms: example_only_instance
   - _self_
 inferencer:
-  device_tensors: ["mix_data_object", "s1_data_object", "s2_data_object"] # which tensors should be on device (ex. GPU)  device: auto # device name or "auto"
+  device_tensors: ["mix_data_object", "s1_data_object", "s2_data_object", "mouth_s1", "mouth_s2"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "dla_test" # any name here, can be a dataset name
   compute_metrics: True
   seed: 1
-  from_pretrained: "models/conv_tasnet.pth" # path to the pretrained model
+  from_pretrained: null # path to the pretrained model

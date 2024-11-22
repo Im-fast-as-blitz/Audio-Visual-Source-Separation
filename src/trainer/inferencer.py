@@ -131,7 +131,7 @@ class Inferencer(BaseTrainer):
         # Use if you need to save predictions on disk
 
         batch_size = batch["mix_data_object"].shape[0]
-        current_id = batch_idx * batch_size
+        # current_id = batch_idx * batch_size
 
         if self.save_path is not None:
             s1_path = self.save_path / part / "s1"
@@ -145,7 +145,8 @@ class Inferencer(BaseTrainer):
             pred1 = batch["s1_pred_object"][i].clone()
             pred2 = batch["s2_pred_object"][i].clone()
 
-            output_id = current_id + i
+            # output_id = current_id + i
+            output_id = batch["id"][i]
 
             if self.save_path is not None:
                 # you can use safetensors or other lib here

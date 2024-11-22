@@ -103,7 +103,6 @@ class CAF(nn.Module):
         Returns:
             output (dict): output dict containing logits.
         """
-        print("INIT SAF", a.shape, v.shape)
         a_val = self.p1(a)
         a_gate = self.p2(a)
 

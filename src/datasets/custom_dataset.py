@@ -87,7 +87,12 @@ class СustomAudioDataset(BaseDataset):
                             "path_s2": s2_path,
                         }
                     )
-
+                wav_id = file.replace(".wav", "")
+                paths.update(
+                    {
+                        "id": wav_id,
+                    }
+                )
                 index.append(paths)
 
         return index
@@ -118,4 +123,7 @@ class СustomAudioDataset(BaseDataset):
             mouth_data_s2 = load(data_dict["path_mouth_s2"])["data"]
             instance_data["mouth_s1"] = mouth_data_s1
             instance_data["mouth_s2"] = mouth_data_s2
+        
+        instance_data["id"] = data_dict["id"]
+
         return instance_data
