@@ -4,6 +4,7 @@ torchvision==0.17.0
 soundfile
 sox
 torchmetrics
+torch_audiomentations
 numpy==1.26.4
 tqdm
 matplotlib

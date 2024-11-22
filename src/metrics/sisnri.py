@@ -1,5 +1,5 @@
 import torch
-from torchmetrics import ScaleInvariantSignalNoiseRatio
+from torchmetrics.audio import ScaleInvariantSignalNoiseRatio
 from src.metrics.base_metric import BaseMetric
 import itertools
 import numpy as np

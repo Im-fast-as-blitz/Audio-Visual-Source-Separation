@@ -1,8 +1,9 @@
 train:
   _target_: src.datasets.СustomAudioDataset
   part: "train"
-  dir: "/kaggle/input/dla-avss/dla_dataset"
+  dir: "dla_dataset"
 val:
   _target_: src.datasets.СustomAudioDataset
   part: "val"
-  dir: "/kaggle/input/dla-avss/dla_dataset"
+  dir: "dla_dataset"
+  limit: 1000

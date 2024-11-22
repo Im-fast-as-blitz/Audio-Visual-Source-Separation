@@ -3,6 +3,7 @@ import pandas as pd
 from random import shuffle
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
+from src.utils.audio_utils import normalize_audio
 
 
 class Trainer(BaseTrainer):
@@ -47,8 +48,6 @@ class Trainer(BaseTrainer):
             batch["loss"].backward()  # sum of all losses is always called loss
             self._clip_grad_norm()
             self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
 
         # update metrics for each loss (in case of multiple losses)
         for loss_name in self.config.writer.loss_names:
@@ -75,12 +74,25 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # self._log_audio(batch)
-            pass
-        else:
             self._log_audio(batch)
+        else:
+            self._log_preds(batch)
 
     def _log_audio(self, batch, examples_to_log=8):
+        result = {}
+        examples_to_log = min(examples_to_log, batch['mix_data_object'].shape[0])
+
+        tuples = list(batch['mix_data_object'])
+        shuffle(tuples)
+
+        for idx, mix in enumerate(tuples[:examples_to_log]):
+            result[idx] = {
+                "mixed": self.writer.wandb.Audio(mix.squeeze(0).detach().cpu().numpy(), sample_rate=16000)
+            }
+        self.writer.add_table("mixed audio", pd.DataFrame.from_dict(result, orient="index"))
+
+
+    def _log_preds(self, batch, examples_to_log=8):
         result = {}
         examples_to_log = min(examples_to_log, batch['mix_data_object'].shape[0])
 
@@ -93,8 +105,8 @@ class Trainer(BaseTrainer):
                 "mixed": self.writer.wandb.Audio(mix.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
                 "target_1": self.writer.wandb.Audio(s1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
                 "target_2": self.writer.wandb.Audio(s2.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
-                "pred_1": self.writer.wandb.Audio(pred1.squeeze(0).detach().cpu().numpy(), sample_rate=16000),
-                "pred_2": self.writer.wandb.Audio(pred2.squeeze(0).detach().cpu().numpy(), sample_rate=16000)
+                "pred_1": self.writer.wandb.Audio(normalize_audio(pred1).squeeze(0).detach().cpu().numpy(), sample_rate=16000),
+                "pred_2": self.writer.wandb.Audio(normalize_audio(pred2).squeeze(0).detach().cpu().numpy(), sample_rate=16000)
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(result, orient="index"))
                 
