@@ -136,13 +136,16 @@ class CAF(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_chanels, out_chanels):
+    def __init__(self, in_chanels, out_chanels, n_fft, hop_length):
         """
         Args:
         
         
         """
         super().__init__()
+
+        self.n_fft = n_fft
+        self.hop_length = hop_length
         
         self.conv = nn.Conv2d(in_chanels, out_chanels, (3, 3))
 
@@ -156,9 +159,61 @@ class Encoder(nn.Module):
             output (dict): output dict containing logits.
         """
         print("emb lol", x.shape)
-        x = torch.stft(x, n_fft=self.win, hop_length=self.hop_length, window=self.window.to(x.device), return_complex=True)
-        x = torch.stack([x.real, x.imag], 1)   # .transpose(2, 3).contiguous() 
+        x = torch.stft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), return_complex=True)
+        print("emb lol", x.shape)
+        x = torch.stack([x.real, x.imag], 1).transpose(2, 3).contiguous() 
         return self.conv(x) 
+        
+
+    def __str__(self):
+        """
+        Model prints with the number of parameters.
+        """
+        all_parameters = sum([p.numel() for p in self.parameters()])
+        trainable_parameters = sum(
+            [p.numel() for p in self.parameters() if p.requires_grad]
+        )
+
+        result_info = super().__str__()
+        result_info = result_info + f"\nAll parameters: {all_parameters}"
+        result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
+
+        return result_info
+
+
+class Decoder(nn.Module):
+    def __init__(self, in_chanels, n_fft, hop_length):
+        """
+        Args:
+        
+        
+        """
+        super().__init__()
+
+        self.n_fft = n_fft
+        self.hop_length
+        
+        self.conv = nn.ConvTranspose2d(in_chanels, 2, 3, padding=1)
+
+    def forward(self, x, audio_length=32000):
+        """
+        Model forward method.
+
+        Args:
+            data_object (Tensor): input vector.
+        Returns:
+            output (dict): output dict containing logits.
+        """
+        tmp = x.shape[1]
+        bs = x.shape[0]
+
+        x = x.reshape(x.shape[0] * x.shape[1], x.shape[2], x.shape[3], x.shape[4])
+        x = self.conv(x)
+        x = torch.complex(x[:, 0], x[:, 1]).transpose(1, 2).contiguous()
+
+        x = torch.istft(x, n_fft=self.n_fft, hop_length=self.hop_length, window=self.window.to(x.device), length=audio_length)
+
+        return x.reshape(bs, tmp, audio_length) 
         
 
     def __str__(self):
@@ -182,7 +237,7 @@ class RTFSNetModel(nn.Module):
     Conv-TasNet model
     """
 
-    def __init__(self, ):
+    def __init__(self, Ca=256, n_fft=256, hop_length=128, hidden_channels=64, kernel_size=3, caf_heads=4):
         """
         Args:
         
@@ -190,15 +245,14 @@ class RTFSNetModel(nn.Module):
         """
         super().__init__()
 
-        self.encoder = Encoder(in_chanels=, out_chanels=)
+        self.encoder = Encoder(in_chanels=1, out_chanels=Ca, n_fft=n_fft, hop_length=hop_length)
 
-        self.ap = RTFSBlock(in_chanels=, out_chanels=, kernel_size = 5, stride = 2, upsampling_depth = 2, use_2d_conv = True)
-        self.vp = RTFSBlock(in_chanels=, out_chanels=, kernel_size = 5, stride = 2, upsampling_depth = 2, use_2d_conv = False)   # 1d conv
+        self.vp = RTFSBlock(in_chanels=Ca, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=4, n_heads=8, use_2d_conv=False)  # 1d conv
+        self.ap = RTFSBlock(in_chanels=Ca, out_chanels=hidden_channels, kernel_size=kernel_size, upsampling_depth=2, sru_num_layers=4, use_2d_conv=True)
 
-        self.decoder = nn.ConvTranspose2d(, 2, 3)
+        self.caf = CAF(Ca=Ca, Cv=Ca, h=caf_heads)
 
-        self.caf = CAF(Ca=)
-
+        self.decoder = Decoder(in_chanels=10, n_fft=n_fft, hop_length=hop_length)
         
 
     def forward(self, mix_data_object, mouth_emb, **batch):
@@ -223,7 +277,9 @@ class RTFSNetModel(nn.Module):
 
         z = self.SSS(aR, a0)
 
-        return self.decoder(z)
+        z = self.decoder(z)
+        torch.istft
+        return s
         
 
     def __str__(self):
