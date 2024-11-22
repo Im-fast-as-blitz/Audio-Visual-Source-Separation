@@ -111,6 +111,7 @@ class СustomAudioDataset(BaseDataset):
             }
         else:
             instance_data = {"mix_data_object": mix_data_object}
+        instance_data = self.preprocess_data(instance_data)
 
         if self._use_mouth:
             mouth_data_s1 = load(data_dict["path_mouth_s1"])["data"]
