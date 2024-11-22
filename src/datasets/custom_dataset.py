@@ -22,7 +22,7 @@ class СustomAudioDataset(BaseDataset):
         part: str,
         dir: Optional[str],
         mouth_emb_dir: Optional[str] = None,
-        use_mouths: bool = False,
+        use_mouth: bool = False,
         *args,
         **kwargs,
     ):
@@ -34,7 +34,7 @@ class СustomAudioDataset(BaseDataset):
         self.mouth_emb_dir = mouth_emb_dir
         self._data_dir = data_dir
         self._part = part
-        self._use_mouths = use_mouths
+        self._use_mouth = use_mouth
         index = self._get_or_load_index(part)
 
         super().__init__(index, *args, **kwargs)
@@ -63,7 +63,7 @@ class СustomAudioDataset(BaseDataset):
         for root, _, files in os.walk(mix_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                if self._use_mouths:
+                if self._use_mouth:
                     mouth_path_s1 = os.path.join(mouth_dir, file.split("_")[0]) + ".npz"
                     mouth_path_s2 = os.path.join(mouth_dir, file.split("_")[1]).replace(
                         ".wav", ".npz"
@@ -112,7 +112,7 @@ class СustomAudioDataset(BaseDataset):
         else:
             instance_data = {"mix_data_object": mix_data_object}
 
-        if self._use_mouths:
+        if self._use_mouth:
             mouth_data_s1 = load(data_dict["path_mouth_s1"])["data"]
             mouth_data_s2 = load(data_dict["path_mouth_s2"])["data"]
             instance_data["mouth_s1"] = mouth_data_s1

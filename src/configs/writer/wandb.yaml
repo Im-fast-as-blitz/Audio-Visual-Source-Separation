@@ -1,5 +1,6 @@
 _target_: src.logger.WandBWriter
-project_name: "audio-visual-source-separation"
+# project_name: "audio-visual-source-separation"
+project_name: "test"
 entity: null
 run_name: "conv_tasnet"
 mode: "online"
