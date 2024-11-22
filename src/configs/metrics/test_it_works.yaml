@@ -2,8 +2,8 @@ device: "auto"
 train: # metrics that are calculated during training
   - _target_: src.metrics.SI_SNRi
     device: ${metrics.device}
-    name: "TRAIN_SI-SNRi" # just an example to see difference
-inference: # metrics that are calculated during inference (eval)
+    name: "TRAIN_SI-SNRi" 
+inference: # metrics that are calculated during eval
   - _target_: src.metrics.SI_SNRi
     device: ${metrics.device}
     num_speakers: 2

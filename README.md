@@ -20,6 +20,8 @@
 </a>
 </p>
 
+
+
 ## About
 
 This repository contains a template for [PyTorch](https://pytorch.org/)-based Deep Learning projects.
@@ -117,17 +119,34 @@ To run inference (evaluate the model or save predictions):
 python3 inference.py HYDRA_CONFIG_ARGUMENTS
 ```
 
+## How to get video embeddings:
+
+Firstly download video encoder weights by using special script: 
+```python get_model_weight.py```
+
+Than get necessary libs and run model inference:
+
+```
+
+cd src/mouth_processor/Lipreading_using_Temporal_Convolutional_Networks
+
+pip install -r requirments.txt
+
+# add paths to model, data directory, and directory to save embeds  
+python python main.py --modality video \
+                --extract-feats \
+                --config-path configs/lrw_resnet18_dctcn.json \ 
+                --model-path ../../utils/mouth_model.pth \
+                --mouth-patch-path ../../../dla_dataset/mouths \
+                --mouth-embedding-out-path ../../../dla_dataset/mouths_embeds \
+                --batch-size 1
+```
+
 ## Useful Links:
 
 You may find the following links useful:
 
 - [Report branch](https://github.com/Blinorot/pytorch_project_template/tree/report): Guidelines for writing a scientific report/paper (with an emphasis on DL projects).
-
-- [CLAIRE Template](https://github.com/CLAIRE-Labo/python-ml-research-template): additional template by [EPFL CLAIRE Laboratory](https://www.epfl.ch/labs/claire/) that can be combined with ours to enhance experiments reproducibility via [Docker](https://www.docker.com/).
-
-- [Mamba](https://github.com/mamba-org/mamba) and [Poetry](https://python-poetry.org/): alternatives to [Conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [pip](https://pip.pypa.io/en/stable/installation/) package managers given above.
-
-- [Awesome README](https://github.com/matiassingers/awesome-readme): a list of awesome README files for inspiration. Check the basics [here](https://github.com/PurpleBooth/a-good-readme-template).
 
 ## Credits
 

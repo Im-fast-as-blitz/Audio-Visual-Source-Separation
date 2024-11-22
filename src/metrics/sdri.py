@@ -1,5 +1,5 @@
 import torch
-from torchmetrics import SignalDistortionRatio
+from torchmetrics.audio import SignalDistortionRatio
 from src.metrics.base_metric import BaseMetric
 import itertools
 import numpy as np
@@ -7,7 +7,7 @@ import numpy as np
 class SDR(BaseMetric):
     def __init__(self, device:str, *args, **kwargs):
         """
-        Computes SDR metric
+        Computes SDRi metric
 
         Args:
             device (str): device for the metric calculation (and tensors).

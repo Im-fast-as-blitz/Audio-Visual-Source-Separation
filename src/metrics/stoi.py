@@ -1,6 +1,7 @@
 import torch
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility
 from src.metrics.base_metric import BaseMetric
+from src.utils.audio_utils import normalize_audio
 import itertools
 import numpy as np
 
@@ -35,7 +36,7 @@ class STOI(BaseMetric):
             for perm in itertools.permutations(range(self.num_speakers)):
                 curr_metric = 0
                 for ind_target, ind_pred in enumerate(perm):
-                    curr_metric += self.metric(kwargs[f"s{ind_pred+1}_pred_object"][val_ind], kwargs[f"s{ind_target+1}_data_object"][val_ind]).mean().item()
+                    curr_metric += self.metric(normalize_audio(kwargs[f"s{ind_pred+1}_pred_object"][val_ind]), normalize_audio(kwargs[f"s{ind_target+1}_data_object"][val_ind])).mean().item()
                 metrics.append(curr_metric / self.num_speakers)
             batch_metrics.append(np.max(metrics))
         return np.mean(batch_metrics)
