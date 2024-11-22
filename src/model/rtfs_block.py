@@ -230,7 +230,7 @@ class RTFSBlock(nn.Module):
 
         self.dualpath1 = DualPath(out_chanels, 32, 4, 8, 1, use_2d_conv=use_2d_conv)  # magic constans :)
         self.dualpath2 = DualPath(out_chanels, 32, 3, 8, 1, use_2d_conv=use_2d_conv)
-        self.attention = MultiHeadSelfAttention2D(3, 64, 4, 4, use_2d_conv=use_2d_conv)
+        self.attention = MultiHeadSelfAttention2D(out_chanels, 64, 4, use_2d_conv=use_2d_conv)
 
         self.recon1_1 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
         self.recon1_2 = Reconstract(out_chanels, kernel_size, use_2d_conv=use_2d_conv)
