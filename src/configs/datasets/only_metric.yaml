@@ -1,0 +1,4 @@
+_target_: src.datasets.СustomEvalAudioDataset
+dir_predicted: "data/saved/lol_kekichnaia/test"
+dir_ideal: "dla_dataset_infer/audio"
+instance_transforms: ${transforms.instance_transforms.inference}

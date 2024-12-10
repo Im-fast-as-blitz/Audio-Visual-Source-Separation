@@ -1,4 +1,5 @@
 import torch
+import torchaudio
 from tqdm.auto import tqdm
 
 from src.metrics.tracker import MetricTracker
@@ -150,8 +151,8 @@ class Inferencer(BaseTrainer):
 
             if self.save_path is not None:
                 # you can use safetensors or other lib here
-                torch.save(pred1, s1_path / f"output_{output_id}.pth")
-                torch.save(pred2, s2_path / f"output_{output_id}.pth")
+                torchaudio.save(s1_path / f"output_{output_id}.wav", pred1.unsqueeze(0), sample_rate=16000)
+                torchaudio.save(s2_path / f"output_{output_id}.wav", pred2.unsqueeze(0), sample_rate=16000)
 
         return batch
 

@@ -68,7 +68,33 @@ To run inference (evaluate the model or save predictions):
 python3 inference.py HYDRA_CONFIG_ARGUMENTS
 ```
 
-To evaluate metrics use trainer/evaluater.py
+For example:
+
+- If you want to run inference in order to reproduce our metrics on the val set of the dataset use this command:
+
+```bash
+python3 inference.py datasets.test.dir=PATH_TO_DATASET inferencer.save_path=PATH_TO_OUT_DIR dataloader.batch_size=BATCH_SIZE
+```
+where PATH_TO_DATASET is the path to the dataset directory in the following format: ".../dla_dataset", and PATH_TO_OUT_DIR is the directory for the predicted separate utterances.
+
+- If you want just to get separated audio use the following command:
+
+```bash
+python3 inference.py datasets=inference datasets.test.dir=PATH_TO_DATASET inferencer.save_path=PATH_TO_OUT_DIR dataloader.batch_size=BATCH_SIZE inferencer.compute_metrics=False
+```
+where PATH_TO_DATASET is the path to the dataset directory from the hw description.
+
+- If you want to get separated audio and to compute all metrics follow the next example:
+
+```bash
+python3 inference.py datasets=inference datasets.test.dir=PATH_TO_DATASET inferencer.save_path=PATH_TO_OUT_DIR dataloader.batch_size=BATCH_SIZE inferencer.compute_metrics=True 
+```
+
+To evaluate metrics on provided audio use evaluater.py (use `src/configs/only_metrics.yaml`):
+
+```bash
+python3 evaluator.py
+```
 
 ## How to get video embeddings:
 

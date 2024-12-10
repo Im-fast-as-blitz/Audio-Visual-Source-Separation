@@ -1,0 +1,14 @@
+device: "auto"
+train: []
+inference:
+  - _target_: src.metrics.PESQ
+    device: ${metrics.device}
+    num_speakers: 2
+    fs: 16000
+    mode: "wb"
+    name: "PESQ"
+  - _target_: src.metrics.STOI
+    device: ${metrics.device}
+    num_speakers: 2
+    fs: 16000
+    name: "STOI"

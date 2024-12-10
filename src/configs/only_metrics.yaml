@@ -1,0 +1,8 @@
+defaults:
+  - metrics: only_metric
+  - datasets: only_metric 
+  - dataloader: example
+  - transforms: example_only_instance
+  - _self_
+inferencer:
+  compute_metrics: True

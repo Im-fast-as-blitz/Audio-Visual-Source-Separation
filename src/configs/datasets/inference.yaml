@@ -1,0 +1,5 @@
+test:
+  _target_: src.datasets.СustomAudioDataset
+  part: "test"
+  dir: "chebupel"
+  instance_transforms: ${transforms.instance_transforms.inference}

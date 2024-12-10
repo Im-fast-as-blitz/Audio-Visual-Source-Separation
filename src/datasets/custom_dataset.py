@@ -34,13 +34,15 @@ class СustomAudioDataset(BaseDataset):
         self.mouth_emb_dir = mouth_emb_dir
         self._data_dir = data_dir
         self._part = part
+        self._use_gt = True
         self._use_mouth = use_mouth
+        self.index_path = self._data_dir / f"{part}_index.json"
         index = self._get_or_load_index(part)
 
         super().__init__(index, *args, **kwargs)
 
     def _get_or_load_index(self, part):
-        index_path = self._data_dir / f"{part}_index.json"
+        index_path = self.index_path
         if index_path.exists():
             with index_path.open() as f:
                 index = json.load(f)
@@ -52,14 +54,18 @@ class СustomAudioDataset(BaseDataset):
 
     def _create_index(self, part):
         index = []
-        split_dir = self._data_dir / "audio" / part
-
+        if part == "test":
+            split_dir = self._data_dir / "audio"
+        else:
+            split_dir = self._data_dir / "audio" / part
         mix_dir = split_dir / "mix"
         mouth_dir = self.mouth_emb_dir
-        if part == "train" or part == "val":
-            s1_dir = split_dir / "s1"
-            s2_dir = split_dir / "s2"
 
+        s1_dir = split_dir / "s1"
+        s2_dir = split_dir / "s2"
+
+        if part == "test" and not s1_dir.exists():
+            self._use_gt = False
         for root, _, files in os.walk(mix_dir):
             for file in files:
                 file_path = os.path.join(root, file)
@@ -78,7 +84,7 @@ class СustomAudioDataset(BaseDataset):
                     paths = {
                         "path_mix": file_path,
                     }
-                if part == "train" or part == "val":
+                if part == "train" or part == "val" or self._use_gt:
                     s1_path = os.path.join(s1_dir, file)
                     s2_path = os.path.join(s2_dir, file)
                     paths.update(
@@ -103,7 +109,7 @@ class СustomAudioDataset(BaseDataset):
         mix_path = data_dict["path_mix"]
         mix_data_object = self.load_audio(mix_path)
 
-        if self._part == "train" or self._part == "val":
+        if self._part == "train" or self._part == "val" or self._use_gt:
             s1_path = data_dict["path_s1"]
             s2_path = data_dict["path_s2"]
             s1_data_object = self.load_audio(s1_path)
