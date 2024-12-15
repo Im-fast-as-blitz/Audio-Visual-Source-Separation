@@ -44,6 +44,12 @@ class СustomAudioDataset(BaseDataset):
     def _get_or_load_index(self, part):
         index_path = self.index_path
         if index_path.exists():
+            if part == "test":
+                s1_dir = self._data_dir / "audio" / "s1"
+            else:
+                s1_dir = self._data_dir / "audio" / part / "s1"
+            if part == "test" and not s1_dir.exists():
+                self._use_gt = False
             with index_path.open() as f:
                 index = json.load(f)
         else:

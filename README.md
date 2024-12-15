@@ -5,7 +5,7 @@
 
 ## About
 
-This repository contains a implementation on Conv-Tasnet and RTFS models for speach separation.
+This repository contains a implementation on Conv-Tasnet and RTFS models for speach separation. 
 
 ## Installation
 
@@ -35,7 +35,7 @@ This repository contains a implementation on Conv-Tasnet and RTFS models for spe
    source project_env
    ```
 
-1. Install all required packages
+1. Install all required packages:
 
    ```bash
    pip install -r requirements.txt
@@ -46,7 +46,13 @@ This repository contains a implementation on Conv-Tasnet and RTFS models for spe
    pre-commit install
    ```
 
-In case you want to use RTFS model, get video embeddings at first (see chapter `How to get video embeddings`). 
+3. Download model weights:
+   ```bash
+   python get_model_weight.py
+   ```
+
+In case you want to train RTFS model, get video embeddings at first (see chapter `How to get video embeddings`). However, only Conv-Tanset weights are available for downloading, so you do not need video embeddings in order to run inference with our best model.
+
 ## How To Use
 
 To train a model, run the following command:
@@ -84,7 +90,7 @@ python3 inference.py datasets=inference datasets.test.dir=PATH_TO_DATASET infere
 ```
 where PATH_TO_DATASET is the path to the dataset directory from the hw description.
 
-- If you want to get separated audio and to compute all metrics follow the next example:
+- If you want to get separated audio and to compute all metrics (in case your dataset contains ground-truth separated utterances) follow the next example:
 
 ```bash
 python3 inference.py datasets=inference datasets.test.dir=PATH_TO_DATASET inferencer.save_path=PATH_TO_OUT_DIR dataloader.batch_size=BATCH_SIZE inferencer.compute_metrics=True 
@@ -97,7 +103,7 @@ python3 evaluator.py
 ```
 
 ## How to get video embeddings:
-
+### Use only for RTFS
 Firstly download video encoder weights by using special script: 
 ```python get_model_weight.py```
 
